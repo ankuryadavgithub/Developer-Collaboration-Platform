@@ -9,6 +9,14 @@ lerna-debug.log*
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
 # Runtime data
 pids
 *.pid
@@ -70,6 +78,10 @@ web_modules/
 .env.*
 !.env.example
 
+# Build output
+dist/
+build/
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
@@ -82,6 +94,10 @@ out
 .nuxt
 dist
 .output
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
 
 # Gatsby files
 .cache/
