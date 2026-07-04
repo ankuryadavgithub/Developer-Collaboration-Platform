@@ -4,10 +4,10 @@ import { Mail, Lock, User, ArrowRight } from "lucide-react";
 
 function Signup() {
   return (
-    <div className="m-0 min-h-screen bg-linear-to-br from-[#6A89A7] via-[#BDDDFC] via-[#88BDF2] to-[#384959] flex justify-center items-center">
+    <div className="m-0 min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-center">
       <div id="window" className="max-w-3xl h-160 flex rounded-3xl overflow-hidden shadow-2xl bg-white scale-90">
         {/* /left side */}
-        <div className="flex-1 bg-linear-to-br from-[#3B0764] via-[#7E1E68] to-[#F97316] text-white p-5 flex flex-col justify-center">
+        <div className="flex-1 bg-linear-to-br from-[#4747b0] via-[#460562] via-[#ce41ce] to-[#4e064bec] text-white p-5 flex flex-col justify-center">
           <h1 className="text-4xl font-bold mb-3">
             Developer Collaboration Platform
           </h1>
@@ -139,7 +139,7 @@ function Signup() {
             </div>
 
             {/* create account button */}
-            <button className="w-full rounded-xl bg-linear-to-br from-blue-600 to-violet-600 hover:from-blue-700 hover:to-violet-700 text-white py-1 font-semibold flex justify-center items-center hover:scale-[1.02] active:scale-95 transition-all duration-200 gap-2 ">
+            <button className="w-full rounded-xl bg-linear-to-br from-[#ED80E9] to-[#9400D3] hover:from-purple-950 hover:to-purple-600 text-white py-1 font-semibold flex justify-center items-center hover:scale-[1.02] active:scale-95 transition-all duration-200 gap-2 ">
               Create Account
               <ArrowRight size={18} />
             </button>
