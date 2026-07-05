@@ -6,15 +6,15 @@ import githubIcon from "../assets/github.svg";
 
 function Login() {
   return(
-    <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] py-24 flex justify-center items-start lg:items-center px-4 py-6 sm:px-22 sm:py-24 lg:py-2">
+    <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-8  lg:px-20">
       <form
         id="login-window"
-        className="w-full flex flex-col lg:flex-row lg:max-w-2xl rounded-3xl lg:rounded-[36px] overflow-hidden bg-white border border-white/20 shadow-2xl lg:min-h-[500px]"
+        className="w-full max-w-2xl rounded-3xl lg:rounded-[36px] overflow-hidden bg-white border border-white/20 shadow-2xl lg:min-h-[500px]"
       >
 
         {/* Right Side */}
-        <div className="lg:basis-[100%] bg-linear-to-br from-[#FFFBF5] via-[#FFF7ED] to-[#FEF3C7] flex items-center justify-center py-2 lg:py-6 overflow-y-auto">
-          <div className="relative w-full max-w-[760px] px-5 py-6 sm:px-8 sm:py-8">
+        <div className="w-full bg-linear-to-br from-[#FFFBF5] via-[#FFF7ED] to-[#FEF3C7] flex items-center justify-center py-2 lg:py-6 overflow-y-auto">
+          <div className="w-full p-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
               Login into your Account
             </h1>
@@ -31,7 +31,7 @@ function Login() {
                 >
                   Username
                 </label>
-                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
                   <User size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="username"
@@ -52,7 +52,7 @@ function Login() {
                 >
                   Password
                 </label>
-                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
                   <Lock size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="password"
@@ -95,7 +95,7 @@ function Login() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full rounded-xl bg-gradient-to-r from-[#9400D3] via-[#C026D3] to-[#ED80E9] py-3.5 text-white font-semibold flex items-center justify-center gap-2 hover:from-[#ED80E9] hover:via-[#C026D3] hover:to-[#9400D3] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-500 cursor-pointer"
+              className="w-full rounded-xl bg-gradient-to-r from-[#9400D3] via-[#C026D3] to-[#ED80E9] py-3 text-white font-semibold flex items-center justify-center gap-2 hover:from-[#ED80E9] hover:via-[#C026D3] hover:to-[#9400D3] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-500 cursor-pointer"
             >
               Login
               <ArrowRight size={18} />
