@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import googleIcon from "../assets/google.svg";
+import githubIcon from "../assets/github.svg";
 
 function Signup() {
   return (
@@ -192,14 +194,14 @@ function Signup() {
                 type="button"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
               >
-                <Mail size={16} className="text-red-500" />
+                <img src={googleIcon} alt="Google" className="w-5 h-5" />
                 Google
               </button>
               <button
                 type="button"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
               >
-                <Mail size={16} className="text-slate-800" />
+                <img src={githubIcon} alt="Google" className="w-5 h-5" />
                 GitHub
               </button>
             </div>
