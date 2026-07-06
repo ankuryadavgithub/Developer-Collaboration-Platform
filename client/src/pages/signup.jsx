@@ -2,8 +2,13 @@ import { Link } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
+import eyeOn from "../assets/eyeOn.svg";
+import eyeOff from "../assets/eyeOff.svg";
+import { useState } from "react";
 
 function Signup() {
+  const [showPassword,setShowPassword] = useState(false);
+  const [ConfirmPassword,setConfirmPassword] = useState(false);
   return (
     <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
       <form
@@ -116,10 +121,18 @@ function Signup() {
                   <Lock size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
+                  <button 
+                  type="button"
+                  onClick={()=>setShowPassword(!showPassword)}
+                  className="cursor-pointer"
+                  >
+                    <img src={showPassword ? eyeOff:eyeOn} alt="toggle-icon" 
+                    className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
 
@@ -134,10 +147,18 @@ function Signup() {
                   <Lock size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="confirmPassword"
-                    type="password"
+                    type={ConfirmPassword ? "text":"password"}
                     placeholder="Confirm password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
+                  <button 
+                  type="button"
+                  onClick={()=>setConfirmPassword(!ConfirmPassword)}
+                  className="cursor-pointer"
+                  >
+                    <img src={ConfirmPassword ? eyeOff:eyeOn} alt="toggle-password"
+                    className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>

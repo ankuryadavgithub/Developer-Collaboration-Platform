@@ -3,8 +3,12 @@ import { Link } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
+import eyeOn from "../assets/eyeOn.svg"
+import eyeOff from "../assets/eyeOff.svg"
 
 function Login() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return(
     <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-8  lg:px-20">
       <form
@@ -52,14 +56,22 @@ function Login() {
                 >
                   Password
                 </label>
-                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                <div className="relative flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
                   <Lock size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
+                  <button 
+                  type="button"
+                  onClick={()=>setShowPassword(!showPassword)} 
+                  className="cursor-pointer">
+                    <img src={showPassword ? eyeOff : eyeOn} 
+                    alt="toggle-password"
+                    className="w-5 h-5" />
+                  </button>
                 </div>
               </div>
             </div>
