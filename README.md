@@ -17,6 +17,10 @@ Developer-Collaboration-Platform
 │  │  ├─ App.css
 │  │  ├─ App.jsx
 │  │  ├─ assets
+│  │  │  ├─ eyeOff.svg
+│  │  │  ├─ eyeOn.svg
+│  │  │  ├─ github.svg
+│  │  │  ├─ google.svg
 │  │  │  ├─ hero.png
 │  │  │  ├─ react.svg
 │  │  │  └─ vite.svg
@@ -28,11 +32,13 @@ Developer-Collaboration-Platform
 │  │  ├─ index.css
 │  │  ├─ main.jsx
 │  │  ├─ pages
+│  │  │  ├─ forgotpassword.jsx
+│  │  │  ├─ login.jsx
+│  │  │  └─ signup.jsx
 │  │  ├─ services
 │  │  ├─ styles
 │  │  └─ utils
 │  └─ vite.config.js
-├─ docs
 ├─ LICENSE
 ├─ README.md
 └─ server
@@ -46,8 +52,9 @@ Developer-Collaboration-Platform
       ├─ config
       ├─ controllers
       ├─ middleware
-      ├─ models
       ├─ server.js
       ├─ services
-      └─ utils
+      ├─ utils
+      └─ validators
+
 ```

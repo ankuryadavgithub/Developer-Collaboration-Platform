@@ -1,3 +1,5 @@
+// signup.jsx
+
 import { Link } from "react-router-dom";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import googleIcon from "../assets/google.svg";
