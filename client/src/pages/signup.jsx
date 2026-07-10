@@ -11,10 +11,76 @@ import { useState } from "react";
 function Signup() {
   const [showPassword,setShowPassword] = useState(false);
   const [ConfirmPassword,setConfirmPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    username: "",
+    roleSelect: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleChange = (e)=>{
+    setFormData({ ...formData, [e.target.id]: e.target.value});
+  };
+
+  const handleSubmit = async (e)=>{
+    e.preventDefault(); //Avoids page Refreshing
+    setError("");
+
+     if (formData.username.length < 3)
+       return setError("Username must be at least 3 characters.");
+     if (formData.username.includes(" "))
+       return setError("Username cannot contain spaces.");
+     const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
+     if (!passwordRegex.test(formData.password))
+       return setError("Password must be at least 8 chars, with 1 number and 1 special char.");
+     if (formData.password !== formData.confirmPassword)
+       return setError("Passwords do not match!");
+     if (!formData.roleSelect) 
+      return setError("Please select a role.");
+
+
+    try{
+      setIsLoading(true);
+      const response = await fetch("http://localhost:5000/api/auth/register",
+        {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            username: formData.username,
+            role: formData.roleSelect,
+            email: formData.email,
+            password: formData.password,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if(!response.ok){
+        throw new Error(data.message || "Registration failed");
+      }
+
+      alert("Account created Successfully");
+      console.log(data);
+    }
+
+    catch (err){
+      setError(err.message);
+    }
+
+    finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-6 sm:py-10 lg:px-8 lg:py-6">
       <form
         id="window"
+        onSubmit={handleSubmit}
         className="w-full max-w-5xl flex flex-col lg:flex-row rounded-3xl lg:rounded-[36px] overflow-hidden bg-white border border-white/20 shadow-2xl lg:min-h-[680px]"
       >
         {/* Left Side */}
@@ -43,7 +109,7 @@ function Signup() {
             <p className="mt-1 mb-6 text-sm sm:text-base text-slate-500">
               Join the developer community today.
             </p>
-
+            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             {/* Username & Role */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
@@ -58,6 +124,10 @@ function Signup() {
                   <input
                     id="username"
                     type="text"
+                    minLength={3}
+                    required
+                    value={formData.username}
+                    onChange={handleChange}
                     placeholder="Enter username"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
@@ -74,6 +144,9 @@ function Signup() {
                 <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
                   <select
                     id="roleSelect"
+                    required
+                    value={formData.roleSelect}
+                    onChange={handleChange}
                     className="w-full appearance-none bg-transparent outline-none text-slate-700 cursor-pointer text-sm sm:text-base"
                   >
                     <option value="">Select your role</option>
@@ -104,6 +177,9 @@ function Signup() {
                 <input
                   id="email"
                   type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
                   placeholder="Enter your email address"
                   className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                 />
@@ -124,16 +200,23 @@ function Signup() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    minLength={8}
+                    required
+                    value={formData.password}
+                    onChange={handleChange}
                     placeholder="Enter password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
-                  <button 
-                  type="button"
-                  onClick={()=>setShowPassword(!showPassword)}
-                  className="cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="cursor-pointer"
                   >
-                    <img src={showPassword ? eyeOff:eyeOn} alt="toggle-icon" 
-                    className="w-5 h-5" />
+                    <img
+                      src={showPassword ? eyeOff : eyeOn}
+                      alt="toggle-icon"
+                      className="w-5 h-5"
+                    />
                   </button>
                 </div>
               </div>
@@ -149,17 +232,22 @@ function Signup() {
                   <Lock size={18} className="text-violet-500 shrink-0" />
                   <input
                     id="confirmPassword"
-                    type={ConfirmPassword ? "text":"password"}
+                    type={ConfirmPassword ? "text" : "password"}
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
                     placeholder="Confirm password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
-                  <button 
-                  type="button"
-                  onClick={()=>setConfirmPassword(!ConfirmPassword)}
-                  className="cursor-pointer"
+                  <button
+                    type="button"
+                    onClick={() => setConfirmPassword(!ConfirmPassword)}
+                    className="cursor-pointer"
                   >
-                    <img src={ConfirmPassword ? eyeOff:eyeOn} alt="toggle-password"
-                    className="w-5 h-5" />
+                    <img
+                      src={ConfirmPassword ? eyeOff : eyeOn}
+                      alt="toggle-password"
+                      className="w-5 h-5"
+                    />
                   </button>
                 </div>
               </div>
