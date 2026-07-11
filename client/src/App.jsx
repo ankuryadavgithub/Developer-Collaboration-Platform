@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import Forgotpassword from "./pages/forgotpassword";
+import Dashboard from "./pages/dashboard";
+import ProtectedRoute from "./components/common/ProtectedRoute";
 import "./index.css";
 
 function App() {
@@ -11,6 +13,9 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgotpassword" element={<Forgotpassword />} />
+
+        
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/signup" replace />} />
       </Routes>
     </BrowserRouter>

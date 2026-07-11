@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { use, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
@@ -8,14 +9,50 @@ import eyeOff from "../assets/eyeOff.svg"
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({username: "", password: ""});
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate= useNavigate();
 
-  return(
+  const handleChange = (e) =>{
+    setFormData({
+      ...formData,
+      [e.target.id]: e.target.value,
+    });
+  };
+
+  const handleSubmit = async (e)=>{
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    try {
+      const response = await axios.post("http://localhost:5000/api/auth/login", formData);
+
+      if(response.data.success){
+
+        localStorage.setItem("user", JSON.stringify(response.data.data));
+
+        navigate("/dashboard");
+      }
+
+    } catch (err) {
+
+      const errorMessage = err.response?.data?.message || "Something went wrong. Please try again";
+      setError(errorMessage);  
+    }
+    finally{
+      setIsLoading(false);
+    }
+  }
+
+  return (
     <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-8  lg:px-20">
       <form
         id="login-window"
+        onSubmit={handleSubmit}
         className="w-full max-w-2xl rounded-3xl lg:rounded-[36px] overflow-hidden bg-white border border-white/20 shadow-2xl lg:min-h-[500px]"
       >
-
         {/* Right Side */}
         <div className="w-full bg-linear-to-br from-[#FFFBF5] via-[#FFF7ED] to-[#FEF3C7] flex items-center justify-center py-2 lg:py-6 overflow-y-auto">
           <div className="w-full p-8">
@@ -25,8 +62,13 @@ function Login() {
             <p className="mt-1 mb-6 text-sm sm:text-base text-slate-500">
               Please enter your login credentials :
             </p>
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 text-red-600 rounded-xl text-sm border border-red-200">
+                {error}
+              </div>
+            )}
 
-            {/* Username & Role */}
+            {/* Username */}
             <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-4">
               <div>
                 <label
@@ -40,14 +82,17 @@ function Login() {
                   <input
                     id="username"
                     type="text"
+                    value={formData.username}
+                    onChange={handleChange}
                     placeholder="Enter username"
+                    required
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Password & Confirm Password */}
+            {/* Password */}
             <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-4">
               <div>
                 <label
@@ -61,16 +106,21 @@ function Login() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={handleChange}
                     placeholder="Enter password"
                     className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base"
                   />
-                  <button 
-                  type="button"
-                  onClick={()=>setShowPassword(!showPassword)} 
-                  className="cursor-pointer">
-                    <img src={showPassword ? eyeOff : eyeOn} 
-                    alt="toggle-password"
-                    className="w-5 h-5" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="cursor-pointer"
+                  >
+                    <img
+                      src={showPassword ? eyeOff : eyeOn}
+                      alt="toggle-password"
+                      className="w-5 h-5"
+                    />
                   </button>
                 </div>
               </div>
@@ -107,10 +157,11 @@ function Login() {
             {/* Login Button */}
             <button
               type="submit"
-              className="w-full rounded-xl bg-gradient-to-r from-[#9400D3] via-[#C026D3] to-[#ED80E9] py-3 text-white font-semibold flex items-center justify-center gap-2 hover:from-[#ED80E9] hover:via-[#C026D3] hover:to-[#9400D3] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-500 cursor-pointer"
+              disabled={isLoading}
+              className={`w-full rounded-xl bg-gradient-to-r from-[#9400D3] via-[#C026D3] to-[#ED80E9] py-3 text-white font-semibold flex items-center justify-center gap-2  transition-all duration-500 cursor-pointer ${isLoading ? "opacity-75 cursor-not-allowed" : "hover: from-[#ED80E9] hover: via-[#C026D3] hover:to-[#9400D3] hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]"}`}
             >
-              Login
-              <ArrowRight size={18} />
+              {isLoading? "Login in...": "Login"}
+              {!isLoading && <ArrowRight size={18}/>}
             </button>
 
             {/* Divider */}

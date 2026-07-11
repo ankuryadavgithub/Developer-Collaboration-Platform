@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient({});
 
@@ -100,5 +101,92 @@ export const registerUser = async(req,res) => {
         message: "Internal Server Error"
       }
     );
+  }
+};
+
+export const loginUser = async (req, res) =>{
+  try {
+    const {username, password} = req.body;
+
+    if(!username || !password){
+      return res.status(400).json(
+        {
+          success: false,
+          message: "Username and password are required.",
+        }
+      );
+    }
+
+    const user = await prisma.user.findFirst(
+      {
+        where: { username},
+      }
+    );
+
+    if(!user){
+      return res.status(401).json(
+        {
+          success: false,
+          message: "Invalid credentials.",
+        }
+      );
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if(!isPasswordValid){
+      return res.status(401).json(
+        {
+          success: false,
+          message: "Invalid credentials.",
+        }
+      );
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id, username: user.username, role: user.role
+      },
+
+      process.env.JWT_SECRET || "fallback_secret_key",
+      {
+        expiresIn: "1d"
+      }
+    );
+
+    res.cookie("token", token,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000,
+      }
+    );
+
+    return res.status(200).json(
+      {
+        success: true,
+        message: "Login Successful!",
+        token,
+        data:
+        {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Database Error during Login:", error);
+
+    return res.status(500).json(
+      {
+        success: false,
+        message: "Internal Server Error"
+      }
+    );
+    
+    
   }
 };
