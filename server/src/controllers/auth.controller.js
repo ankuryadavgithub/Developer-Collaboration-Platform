@@ -106,7 +106,7 @@ export const registerUser = async(req,res) => {
 
 export const loginUser = async (req, res) =>{
   try {
-    const {username, password} = req.body;
+    const { username, password, turnstileToken} = req.body;
 
     if(!username || !password){
       return res.status(400).json(
@@ -117,6 +117,35 @@ export const loginUser = async (req, res) =>{
       );
     }
 
+    if(!turnstileToken){
+      return res.status(400).json(
+        {
+          success: false,
+          message: "CAPTCHA token is missing."
+        }
+      );
+    }
+
+    const formData = new URLSearchParams();
+    formData.append("secret", process.env.TURNSTILE_SECRET_KEY);
+    formData.append("response", turnstileToken);
+
+    const verficationResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: formData,
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+    });
+
+    const verficationData = await verficationResponse.json();
+
+    if(!verficationData.success){
+      return res.status(403).json(
+        {
+          success: false,
+          message: "CAPTCHA validation failed. Please try again."
+        }
+      );
+    }
     const user = await prisma.user.findFirst(
       {
         where: { username},
