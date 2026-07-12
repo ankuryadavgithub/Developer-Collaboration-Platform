@@ -193,6 +193,17 @@ function Login() {
               {!isLoading && <ArrowRight size={18}/>}
             </button>
 
+            {/* Forgotpassword Link */}
+            <p className="mt-6 text-center text-sm text-slate-600">
+             Don't remember password?  {" "}
+              <Link
+                to="/ForgotPassword"
+                className="font-semibold text-violet-600 hover:text-violet-700 hover:underline transition-colors"
+              >
+              Forgot Password
+              </Link>
+            </p>
+
             {/* Divider */}
             <div className="flex items-center my-5">
               <div className="flex-1 border-t border-slate-300"></div>
