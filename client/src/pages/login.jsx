@@ -1,7 +1,8 @@
-import { use, useState } from "react";
+import { use, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
 import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
 import eyeOn from "../assets/eyeOn.svg"
@@ -13,6 +14,8 @@ function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate= useNavigate();
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef();
 
   const handleChange = (e) =>{
     setFormData({
@@ -24,10 +27,22 @@ function Login() {
   const handleSubmit = async (e)=>{
     e.preventDefault();
     setError("");
+    
+    if (!turnstileToken) {
+      setError("Please complete the CAPTCHA.");
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/auth/login", formData);
+
+      const payload = {
+        ...formData,
+        turnstileToken,
+      };
+
+      const response = await axios.post("http://localhost:5000/api/auth/login", payload);
 
       if(response.data.success){
 
@@ -39,7 +54,10 @@ function Login() {
     } catch (err) {
 
       const errorMessage = err.response?.data?.message || "Something went wrong. Please try again";
-      setError(errorMessage);  
+      setError(errorMessage);
+      
+      turnstileRef.current?.reset();
+      setTurnstileToken("");
     }
     finally{
       setIsLoading(false);
@@ -152,6 +170,17 @@ function Login() {
                   Privacy Policy
                 </Link>
               </label>
+            </div>
+
+            {/* Turnstile Widget */}
+
+            <div className="w-full flex justify-center mt-6 mb-6">
+              <Turnstile 
+                ref={turnstileRef} 
+                siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY} 
+                options={{ theme: 'light' }}
+                onSuccess={(token) => setTurnstileToken(token)}
+              />
             </div>
 
             {/* Login Button */}
