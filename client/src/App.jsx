@@ -22,7 +22,7 @@ function App() {
           }
         />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/signup" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
