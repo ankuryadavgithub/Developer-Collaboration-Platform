@@ -1,45 +1,47 @@
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  generateTemporaryToken,
+} from "../utils/token.utils.js";
 import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient({});
 
-
-export const registerUser = async(req,res) => {
+export const registerUser = async (req, res) => {
   try {
-    const {username, email, role, password} = req.body;
+    const { username, email, role, password } = req.body;
 
-    if(!username || !email || !role || !password){
+    if (!username || !email || !role || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required.",
       });
     }
 
-    if(username.length<3 || username.includes(" ")){
-      return res.status(400).json(
-        {
-          success: false,
-          message: "Username must be at least 3 characters and contain no spaces."
-        }
-      );
+    if (username.length < 3 || username.includes(" ")) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Username must be at least 3 characters and contain no spaces.",
+      });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if(!emailRegex.test(email)){
-      return res.status(400).json(
-        {
-          success: false,
-          message: "Please provide a valid email address."
-        }
-      );
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid email address.",
+      });
     }
 
     const passwordRegex = /^(?=.*[0-9])(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters long, and include at least one number and one special character."
+        message:
+          "Password must be at least 8 characters long, and include at least one number and one special character.",
       });
     }
 
@@ -58,11 +60,11 @@ export const registerUser = async(req,res) => {
 
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ email}, {username}],
+        OR: [{ email }, { username }],
       },
     });
 
-    if(existingUser){
+    if (existingUser) {
       return res.status(409).json({
         success: false,
         message: "A user with this email or username already exists.",
@@ -84,138 +86,169 @@ export const registerUser = async(req,res) => {
     return res.status(201).json({
       success: true,
       message: "User registered successfully!",
-      data:{
-          id: newUser.id,
-          username: newUser.username,
-          email: newUser.email,
-          role: newUser.role,
-        },
-    })
-
+      data: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        role: newUser.role,
+      },
+    });
   } catch (error) {
     console.error("Database error during signup:", error);
-    
-    return res.status(500).json(
-      {
-        success: false,
-        message: "Internal Server Error"
-      }
-    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
 
-export const loginUser = async (req, res) =>{
+export const loginUser = async (req, res) => {
   try {
-    const { username, password, turnstileToken} = req.body;
+    const { username, password, turnstileToken } = req.body;
 
-    if(!username || !password){
-      return res.status(400).json(
-        {
-          success: false,
-          message: "Username and password are required.",
-        }
-      );
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required.",
+      });
     }
 
-    if(!turnstileToken){
-      return res.status(400).json(
-        {
-          success: false,
-          message: "CAPTCHA token is missing."
-        }
-      );
+    if (!turnstileToken) {
+      return res.status(400).json({
+        success: false,
+        message: "CAPTCHA token is missing.",
+      });
     }
 
     const formData = new URLSearchParams();
     formData.append("secret", process.env.TURNSTILE_SECRET_KEY);
     formData.append("response", turnstileToken);
 
-    const verficationResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      body: formData,
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'}
-    });
+    const verficationResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        body: formData,
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      },
+    );
 
     const verficationData = await verficationResponse.json();
 
-    if(!verficationData.success){
-      return res.status(403).json(
-        {
-          success: false,
-          message: "CAPTCHA validation failed. Please try again."
-        }
-      );
+    if (!verficationData.success) {
+      return res.status(403).json({
+        success: false,
+        message: "CAPTCHA validation failed. Please try again.",
+      });
     }
-    const user = await prisma.user.findFirst(
-      {
-        where: { username},
-      }
-    );
+    const user = await prisma.user.findFirst({
+      where: { username },
+    });
 
-    if(!user){
-      return res.status(401).json(
-        {
-          success: false,
-          message: "Invalid credentials.",
-        }
-      );
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
-    if(!isPasswordValid){
-      return res.status(401).json(
-        {
-          success: false,
-          message: "Invalid credentials.",
-        }
-      );
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials.",
+      });
     }
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    const token = jwt.sign(
-      {
-        id: user.id, username: user.username, role: user.role
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    };
+
+    res.cookie("accessToken", accessToken, {
+      ...cookieOptions,
+      maxAge: 24 * 60 * 60 * 1000,
+    }); // 1 Day
+    res.cookie("refreshToken", refreshToken, {
+      ...cookieOptions,
+      maxAge: 10 * 24 * 60 * 60 * 1000,
+    }); // 10 Days
+
+    return res.status(200).json({
+      success: true,
+      message: "Login Successful!",
+      accessToken,
+      refreshToken,
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
       },
-
-      process.env.JWT_SECRET || "fallback_secret_key",
-      {
-        expiresIn: "1d"
-      }
-    );
-
-    res.cookie("token", token,
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: 24 * 60 * 60 * 1000,
-      }
-    );
-
-    return res.status(200).json(
-      {
-        success: true,
-        message: "Login Successful!",
-        token,
-        data:
-        {
-          id: user.id,
-          username: user.username,
-          email: user.email,
-          role: user.role,
-        },
-      }
-    );
+    });
   } catch (error) {
     console.error("Database Error during Login:", error);
 
-    return res.status(500).json(
-      {
-        success: false,
-        message: "Internal Server Error"
-      }
-    );
-    
-    
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };
+
+/*
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email is required." });
+    }
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+    // 1. Generate the Temporary Token
+    const { unHashedToken, hashedToken, tokenExpiry } =
+      generateTemporaryToken();
+    // 2. Save the HASHED token and Expiry to the Database
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        forgotPasswordToken: hashedToken,
+        forgotPasswordExpiry: tokenExpiry,
+      },
+    });
+    // 3. (In a real app, you would send an email with the unHashedToken here)
+    // await sendEmail(user.email, `Reset URL: http://localhost:5173/reset-password/${unHashedToken}`);
+    return res.status(200).json({
+      success: true,
+      message:
+        "Password reset token generated successfully. Please check your email.",
+      resetToken: unHashedToken, // NOTE: Only returning this here for your testing! Remove this line when you implement real emails.
+    });
+  } catch (error) {
+    console.error("Error in forgotPassword:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+*/

@@ -15,8 +15,8 @@ function App() {
         <Route path="/forgotpassword" element={<Forgotpassword />} />
 
         
-        <Route path="/signup" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/" element={<Navigate to="/signup" replace />} />
+        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
