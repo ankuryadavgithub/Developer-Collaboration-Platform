@@ -10,7 +10,7 @@ import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { googleLogin } from "../services/googleAuthService.js";
 import { useNavigate } from "react-router-dom";
-
+import { useNavigationLoading } from "../context/NavigationLoadingContext";
 
 function Signup() {
   const [showPassword,setShowPassword] = useState(false);
@@ -24,7 +24,7 @@ function Signup() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { goTo } = useNavigationLoading();
 
   const handleChange = (e)=>{
     setFormData({ ...formData, [e.target.id]: e.target.value});
@@ -329,9 +329,9 @@ function Signup() {
                     );
 
                     if (result.profileCompleted) {
-                      navigate("/dashboard");
+                      goTo("/dashboard", { replace: true });
                     } else {
-                      navigate("/complete-profile");
+                      goTo("/complete-profile", { replace: true });
                     }
 
                   } catch (error) {

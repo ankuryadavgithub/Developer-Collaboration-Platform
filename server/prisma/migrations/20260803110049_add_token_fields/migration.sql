@@ -9,9 +9,3 @@
 ALTER TABLE "User" ADD COLUMN     "forgotPasswordExpiry" TIMESTAMP(3),
 ADD COLUMN     "forgotPasswordToken" TEXT,
 ADD COLUMN     "refreshToken" TEXT;
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
-
--- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");

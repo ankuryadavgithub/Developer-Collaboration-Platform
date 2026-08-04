@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, ArrowRight } from "lucide-react";
 import { completeProfile } from "../services/googleAuthService.js";
+import { useNavigationLoading } from "../context/NavigationLoadingContext";
 
 function CompleteProfile() {
   const [username, setUsername] = useState("");
@@ -11,7 +12,7 @@ function CompleteProfile() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
+  const { goTo } = useNavigationLoading();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -43,7 +44,7 @@ function CompleteProfile() {
       // Updates the frontend login state used by ProtectedRoute.
       localStorage.setItem("user", JSON.stringify(result.user));
 
-      navigate("/dashboard", { replace: true });
+      goTo("/dashboard", { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message ||

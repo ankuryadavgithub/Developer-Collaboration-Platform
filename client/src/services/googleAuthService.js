@@ -30,3 +30,15 @@ export const completeProfile = async ({ username, role }) => {
 
   return response.data;
 };
+
+export const logout = async () => {
+  const response = await axios.post(
+    `${API_URL}/logout`,
+    {},
+    {
+      withCredentials: true,
+    }
+  );
+
+  return response.data;
+};

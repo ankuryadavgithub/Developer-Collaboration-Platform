@@ -420,6 +420,26 @@ export const completeProfile = async (req, res) => {
     });
   }
 };
+
+export const logoutUser = async (req, res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  // Google login uses "token".
+  res.clearCookie("token", cookieOptions);
+
+  // Normal username/password login currently uses these two.
+  res.clearCookie("accessToken", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+
+  return res.status(200).json({
+    success: true,
+    message: "Logged out successfully.",
+  });
+};
 /*
 export const forgotPassword = async (req, res) => {
   try {

@@ -7,13 +7,16 @@ import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
 import eyeOn from "../assets/eyeOn.svg"
 import eyeOff from "../assets/eyeOff.svg"
+import { GoogleLogin } from "@react-oauth/google";
+import { googleLogin } from "../services/googleAuthService.js";
+import { useNavigationLoading } from "../context/NavigationLoadingContext";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({username: "", password: ""});
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const navigate= useNavigate();
+  const { goTo } = useNavigationLoading();
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef();
 
@@ -48,7 +51,7 @@ function Login() {
 
         localStorage.setItem("user", JSON.stringify(response.data.data));
 
-        navigate("/dashboard");
+        goTo("/dashboard", { replace: true });;
       }
 
     } catch (err) {
@@ -63,6 +66,37 @@ function Login() {
       setIsLoading(false);
     }
   }
+
+  const handleGoogleLogin = async (credentialResponse) => {
+  setError("");
+
+  try {
+    const result = await googleLogin(credentialResponse.credential);
+
+    // Lets ProtectedRoute know that the user has logged in.
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        ...result.user,
+        profileCompleted: result.profileCompleted,
+      })
+    );
+
+    // A completed Google user logs in directly to the dashboard.
+    if (result.profileCompleted) {
+      goTo("/dashboard", { replace: true });;
+      return;
+    }
+
+    // Safety for a first-time Google user who logs in from this page.
+    navigate("/complete-profile", { replace: true });
+    } catch (err) {
+    setError(
+      err.response?.data?.message ||
+        "Google login failed. Please try again."
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-linear-to-br from-[#D3D3FF] via-[#9400D3] via-[#D8BFD8] to-[#ED80E9] flex justify-center items-start lg:items-center px-4 py-6 sm:px-8  lg:px-20">
@@ -215,13 +249,14 @@ function Login() {
 
             {/* Social Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                type="button"
-                className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
-              >
-                <img src={googleIcon} alt="Google" className="w-5 h-5" />
-                Google
-              </button>
+              <div className="flex justify-center">
+                <GoogleLogin
+                  onSuccess={handleGoogleLogin}
+                  onError={() => {
+                    setError("Google login was cancelled or failed.");
+                  }}
+                />
+              </div>
               <button
                 type="button"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
