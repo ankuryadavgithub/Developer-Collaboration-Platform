@@ -1,9 +1,13 @@
 import bcrypt from "bcrypt";
 import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
+import { OAuth2Client } from "google-auth-library";
 
 const prisma = new PrismaClient({});
 
+const googleClient = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID
+);
 
 export const registerUser = async(req,res) => {
   try {
@@ -217,5 +221,215 @@ export const loginUser = async (req, res) =>{
     );
     
     
+  }
+};
+
+export const googleLogin = async (req, res) => {
+  try {
+
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: "Google credential is required."
+      });
+    }
+
+    // Verify token with Google
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+
+    const {
+      email,
+      picture,
+      sub
+    } = payload;
+
+    // Find user
+    let user = await prisma.user.findUnique({
+      where: {
+        email
+      }
+    });
+
+    // First Google Login
+    if (!user) {
+
+      user = await prisma.user.create({
+
+        data: {
+
+          email,
+
+          username: null,
+
+          password: null,
+
+          role: null,
+
+          provider: "google",
+
+          providerId: sub,
+
+          avatar: picture
+
+        }
+
+      });
+
+    }
+
+    // JWT
+    const token = jwt.sign(
+
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      },
+
+      process.env.JWT_SECRET,
+
+      {
+        expiresIn: "1d"
+      }
+
+    );
+
+    // Cookie
+    res.cookie("token", token, {
+
+      httpOnly: true,
+
+      secure: process.env.NODE_ENV === "production",
+
+      sameSite: "strict",
+
+      maxAge: 24 * 60 * 60 * 1000
+
+    });
+
+    return res.status(200).json({
+
+      success: true,
+
+      message: "Google Login Successful",
+
+      profileCompleted: user.profileCompleted,
+
+      user: {
+
+        id: user.id,
+
+        username: user.username,
+
+        email: user.email,
+
+        role: user.role,
+
+        avatar: user.avatar,
+
+        provider: user.provider
+
+      }
+
+    });
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+
+      success: false,
+
+      message: "Google Login Failed"
+
+    });
+
+  }
+};
+
+export const completeProfile = async (req, res) => {
+  try {
+    const username = req.body.username?.trim();
+    const { role } = req.body;
+
+    if (!username || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and role are required.",
+      });
+    }
+
+    if (username.length < 3 || username.includes(" ")) {
+      return res.status(400).json({
+        success: false,
+        message: "Username must be at least 3 characters and contain no spaces.",
+      });
+    }
+
+    const validRoles = [
+      "project_manager",
+      "developer",
+      "frontend_developer",
+      "backend_developer",
+      "fullstack_developer",
+    ];
+
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid role selected.",
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({
+      where: { username },
+    });
+
+    if (existingUser && existingUser.id !== req.user.id) {
+      return res.status(409).json({
+        success: false,
+        message: "This username is already taken.",
+      });
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        username,
+        role,
+        profileCompleted: true,
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile completed successfully.",
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        avatar: updatedUser.avatar,
+        provider: updatedUser.provider,
+        profileCompleted: updatedUser.profileCompleted,
+      },
+    });
+  } catch (error) {
+    console.error("Profile completion error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Could not complete your profile.",
+    });
   }
 };

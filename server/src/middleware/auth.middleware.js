@@ -1,0 +1,32 @@
+// server/src/middleware/auth.middleware.js
+
+import jwt from "jsonwebtoken";
+
+export const requireAuth = (req, res, next) => {
+  const token = req.cookies?.token;
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required. Please log in again.",
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Make the logged-in user's details available to the next controller.
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
+
+    next();
+  } catch (error) {
+    return res.status(401).json({
+      success: false,
+      message: "Your session has expired. Please log in again.",
+    });
+  }
+};

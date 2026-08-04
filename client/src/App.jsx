@@ -4,6 +4,7 @@ import Signup from "./pages/signup";
 import Forgotpassword from "./pages/forgotpassword";
 import Dashboard from "./pages/dashboard";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import CompleteProfile from "./pages/completeProfile";
 import "./index.css";
 
 function App() {
@@ -14,7 +15,12 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgotpassword" element={<Forgotpassword />} />
 
-        
+        <Route path="/complete-profile" element={
+          <ProtectedRoute>
+            <CompleteProfile />
+          </ProtectedRoute>
+          }
+        />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/" element={<Navigate to="/signup" replace />} />
       </Routes>

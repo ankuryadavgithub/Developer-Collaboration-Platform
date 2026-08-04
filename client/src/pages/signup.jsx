@@ -7,6 +7,10 @@ import githubIcon from "../assets/github.svg";
 import eyeOn from "../assets/eyeOn.svg";
 import eyeOff from "../assets/eyeOff.svg";
 import { useState } from "react";
+import { GoogleLogin } from "@react-oauth/google";
+import { googleLogin } from "../services/googleAuthService.js";
+import { useNavigate } from "react-router-dom";
+
 
 function Signup() {
   const [showPassword,setShowPassword] = useState(false);
@@ -20,6 +24,7 @@ function Signup() {
   });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleChange = (e)=>{
     setFormData({ ...formData, [e.target.id]: e.target.value});
@@ -301,13 +306,42 @@ function Signup() {
 
             {/* Social Buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
+              {/* <button
                 type="button"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
               >
                 <img src={googleIcon} alt="Google" className="w-5 h-5" />
                 Google
-              </button>
+              </button> */}
+              <GoogleLogin
+                onSuccess={async (credentialResponse) => {
+                  try {
+                    const result = await googleLogin(
+                      credentialResponse.credential
+                    );
+
+                    localStorage.setItem(
+                      "user",
+                      JSON.stringify({
+                        ...result.user,
+                        profileCompleted: result.profileCompleted,
+                      })
+                    );
+
+                    if (result.profileCompleted) {
+                      navigate("/dashboard");
+                    } else {
+                      navigate("/complete-profile");
+                    }
+
+                  } catch (error) {
+                    console.error(error);
+                  }
+                }}
+                onError={() => {
+                  console.log("Login Failed");
+                }}
+              />
               <button
                 type="button"
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
