@@ -3,7 +3,7 @@
 import jwt from "jsonwebtoken";
 
 export const requireAuth = (req, res, next) => {
-  const token = req.cookies?.token;
+  const token = req.cookies?.accessToken;
 
   if (!token) {
     return res.status(401).json({
@@ -13,13 +13,14 @@ export const requireAuth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     // Make the logged-in user's details available to the next controller.
     req.user = {
       id: decoded.id,
       email: decoded.email,
       role: decoded.role,
+      username: decoded.username,
     };
 
     next();

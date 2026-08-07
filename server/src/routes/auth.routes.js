@@ -17,7 +17,7 @@ const route = express.Router();
 route.post("/register", registerUser);
 route.post("/login", loginUser);
 route.post("/google", googleLogin);
-route.post("/logout", logoutUser);
+route.post("/logout", requireAuth, logoutUser);
 route.get("/github", githubLogin);
 route.get("/github/callback", githubCallback);
 route.get("/github/profile", getGithubProfile);

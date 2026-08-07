@@ -86,6 +86,7 @@ export const registerUser = async(req,res) => {
         email,
         role,
         password: hashedPassword,
+        profileCompleted: true,
       },
     });
 
@@ -229,8 +230,7 @@ export const googleLogin = async (req, res) => {
       user = await prisma.user.create({
         data: {
           email,
-          provider: "google",
-          providerId: sub,
+          googleId: sub,
           avatar: picture,
           profileCompleted: false
         }
@@ -239,29 +239,27 @@ export const googleLogin = async (req, res) => {
       // Account exists! Update the avatar to Google's so they look like a Google user this session.
       user = await prisma.user.update({
         where: { id: user.id },
-        data: { avatar: picture }
+        data: { avatar: picture, googleId: sub }
       });
     }
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: "1d" }
-    );
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    res.cookie("token", token, {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
+
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 24 * 60 * 60 * 1000
-    });
+    };
 
-    // Explicitly CLEAR GitHub access so it acts strictly like a Google account
-    res.clearCookie("github_access_token", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" 
-    });
+    res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
+    res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 10 * 24 * 60 * 60 * 1000 });
+    res.clearCookie("github_access_token", cookieOptions);
 
     return res.status(200).json({
       success: true,
@@ -272,8 +270,7 @@ export const googleLogin = async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
-        avatar: user.avatar,
-        provider: user.provider
+        avatar: user.avatar
       }
     });
   } catch (error) {
@@ -344,7 +341,6 @@ export const completeProfile = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         avatar: updatedUser.avatar,
-        provider: updatedUser.provider,
         profileCompleted: updatedUser.profileCompleted,
       },
     });
@@ -460,8 +456,6 @@ export const githubCallback = async (req, res) => {
       user = await prisma.user.create({
         data: {
           email: verifiedEmail,
-          provider: "github",
-          providerId: String(githubUser.id),
           githubId: String(githubUser.id),
           githubAccessToken: githubToken,
           avatar: githubUser.avatar_url,
@@ -480,8 +474,22 @@ export const githubCallback = async (req, res) => {
       });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 24 * 60 * 60 * 1000 });
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken },
+    });
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    };
+
+    res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
+    res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: 10 * 24 * 60 * 60 * 1000 });
 
     return res.redirect(`${process.env.CLIENT_URL}/auth/github/callback`);
   } catch (error) {
@@ -492,13 +500,13 @@ export const githubCallback = async (req, res) => {
 export const getGithubProfile = async (req, res) => {
   try {
     // 1. Get the current user ID using the token from cookies
-    const currentToken = req.cookies.token || req.cookies.accessToken;
+    const currentToken = req.cookies.accessToken;
     
     if (!currentToken) {
       return res.status(401).json({ success: false, message: "Not logged in" });
     }
 
-    const decoded = jwt.verify(currentToken, process.env.JWT_SECRET);
+    const decoded = jwt.verify(currentToken, process.env.ACCESS_TOKEN_SECRET);
     
     // 2. Find the user in the database
     const user = await prisma.user.findUnique({
@@ -557,7 +565,6 @@ export const getCurrentUser = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
-        provider: user.provider,
         profileCompleted: user.profileCompleted,
       },
     });
@@ -570,24 +577,32 @@ export const getCurrentUser = async (req, res) => {
 };
 
 export const logoutUser = async (req, res) => {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  };
+  try {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    };
 
-  // Google login uses "token".
-  res.clearCookie("token", cookieOptions);
-  res.clearCookie("github_access_token", cookieOptions);
+    if (req.user && req.user.id) {
+      await prisma.user.update({
+        where: { id: req.user.id },
+        data: { refreshToken: null },
+      });
+    }
 
-  // Normal username/password login currently uses these two.
-  res.clearCookie("accessToken", cookieOptions);
-  res.clearCookie("refreshToken", cookieOptions);
+    res.clearCookie("accessToken", cookieOptions);
+    res.clearCookie("refreshToken", cookieOptions);
+    res.clearCookie("github_access_token", cookieOptions);
+    res.clearCookie("token", cookieOptions); // Clear legacy token just in case
 
-  return res.status(200).json({
-    success: true,
-    message: "Logged out successfully.",
-  });
+    return res.status(200).json({
+      success: true,
+      message: "Logged out successfully.",
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error logging out." });
+  }
 };
 /*
 export const forgotPassword = async (req, res) => {

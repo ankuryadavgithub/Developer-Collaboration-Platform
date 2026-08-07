@@ -19,9 +19,8 @@ model User {
   email            String   @unique
   password         String?
   role             String?
-  provider         String   @default("local")
-  providerId       String?
-  githubId              String?   @unique 
+  googleId         String?  @unique
+  githubId         String?  @unique 
   githubAccessToken     String?   
   refreshToken     String? 
   forgotPasswordToken   String?
