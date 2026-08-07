@@ -17,6 +17,7 @@ import {
   useNavigationLoading,
 } from "./context/NavigationLoadingContext";
 import "./index.css";
+import GithubCallback from "./pages/githubCallback";
 
 function AppRoutes() {
   const location = useLocation();
@@ -67,6 +68,7 @@ function AppRoutes() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgotpassword" element={<Forgotpassword />} />
+        <Route path="/auth/github/callback" element={<GithubCallback />} />
 
         <Route
           path="/complete-profile"

@@ -42,3 +42,15 @@ export const logout = async () => {
 
   return response.data;
 };
+
+export const startGithubLogin = () => {
+  window.location.assign("http://localhost:5000/api/auth/github");
+};
+
+export const getCurrentUser = async () => {
+  const response = await axios.get(`${API_URL}/me`, {
+    withCredentials: true,
+  });
+
+  return response.data;
+};

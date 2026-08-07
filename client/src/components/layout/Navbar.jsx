@@ -4,7 +4,8 @@ import { useNavigationLoading } from "../../context/NavigationLoadingContext.jsx
 import githubIcon from "/src/assets/github.svg";
 import { logout } from "../../services/googleAuthService.js";
 
-const Navbar = ({ toggleSidebar }) => {
+// ADDED githubData PROP
+const Navbar = ({ toggleSidebar, githubData }) => {
   const { goTo } = useNavigationLoading();
   const dropdownRef = useRef(null);
 
@@ -102,13 +103,20 @@ const Navbar = ({ toggleSidebar }) => {
           className="hidden cursor-pointer text-slate-400 transition-transform duration-300 hover:scale-110 hover:text-slate-200 md:block"
         />
 
-        <div className="flex h-5 w-5 cursor-pointer items-center justify-center font-medium transition-transform duration-300 hover:scale-110">
-          <img
-            src={githubIcon}
-            alt="GitHub"
-            className="invert opacity-70 transition-opacity hover:opacity-100"
-          />
-        </div>
+        {/* MODIFIED: GitHub Icon now has an onClick handler and only shows if data is missing */}
+        {!githubData && (
+          <div 
+            onClick={() => window.location.href = "http://localhost:5000/api/auth/github?action=connect"}
+            className="flex h-5 w-5 cursor-pointer items-center justify-center font-medium transition-transform duration-300 hover:scale-110"
+            title="Connect your GitHub account"
+          >
+            <img
+              src={githubIcon}
+              alt="GitHub"
+              className="invert opacity-70 transition-opacity hover:opacity-100"
+            />
+          </div>
+        )}
 
         <div className="relative" ref={dropdownRef}>
           <button

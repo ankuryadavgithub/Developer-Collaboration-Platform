@@ -21,6 +21,8 @@ model User {
   role             String?
   provider         String   @default("local")
   providerId       String?
+  githubId              String?   @unique 
+  githubAccessToken     String?   
   refreshToken     String? 
   forgotPasswordToken   String?
   forgotPasswordExpiry  DateTime?

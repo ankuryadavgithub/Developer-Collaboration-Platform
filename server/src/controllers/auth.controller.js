@@ -7,6 +7,7 @@ import {
 } from "../utils/token.utils.js";
 import jwt from "jsonwebtoken";
 import { OAuth2Client } from "google-auth-library";
+import crypto from "crypto";
 
 const prisma = new PrismaClient({});
 
@@ -177,7 +178,7 @@ export const loginUser = async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
     };
 
     res.cookie("accessToken", accessToken, {
@@ -188,6 +189,8 @@ export const loginUser = async (req, res) => {
       ...cookieOptions,
       maxAge: 10 * 24 * 60 * 60 * 1000,
     }); // 10 Days
+
+    res.clearCookie("github_access_token", cookieOptions);
 
     return res.status(200).json({
       success: true,
@@ -213,134 +216,68 @@ export const loginUser = async (req, res) => {
 
 export const googleLogin = async (req, res) => {
   try {
-
     const { credential } = req.body;
+    if (!credential) return res.status(400).json({ success: false, message: "Google credential is required." });
 
-    if (!credential) {
-      return res.status(400).json({
-        success: false,
-        message: "Google credential is required."
-      });
-    }
+    const ticket = await googleClient.verifyIdToken({ idToken: credential, audience: process.env.GOOGLE_CLIENT_ID });
+    const { email, picture, sub } = ticket.getPayload();
 
-    // Verify token with Google
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
+    let user = await prisma.user.findUnique({ where: { email } });
 
-    const payload = ticket.getPayload();
-
-    const {
-      email,
-      picture,
-      sub
-    } = payload;
-
-    // Find user
-    let user = await prisma.user.findUnique({
-      where: {
-        email
-      }
-    });
-
-    // First Google Login
     if (!user) {
-
+      // Brand new account via Google
       user = await prisma.user.create({
-
         data: {
-
           email,
-
-          username: null,
-
-          password: null,
-
-          role: null,
-
           provider: "google",
-
           providerId: sub,
-
-          avatar: picture
-
+          avatar: picture,
+          profileCompleted: false
         }
-
       });
-
+    } else {
+      // Account exists! Update the avatar to Google's so they look like a Google user this session.
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { avatar: picture }
+      });
     }
 
-    // JWT
     const token = jwt.sign(
-
-      {
-        id: user.id,
-        email: user.email,
-        role: user.role
-      },
-
+      { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
-
-      {
-        expiresIn: "1d"
-      }
-
+      { expiresIn: "1d" }
     );
 
-    // Cookie
     res.cookie("token", token, {
-
       httpOnly: true,
-
       secure: process.env.NODE_ENV === "production",
-
-      sameSite: "strict",
-
+      sameSite: "lax",
       maxAge: 24 * 60 * 60 * 1000
+    });
 
+    // Explicitly CLEAR GitHub access so it acts strictly like a Google account
+    res.clearCookie("github_access_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" 
     });
 
     return res.status(200).json({
-
       success: true,
-
       message: "Google Login Successful",
-
       profileCompleted: user.profileCompleted,
-
       user: {
-
         id: user.id,
-
         username: user.username,
-
         email: user.email,
-
         role: user.role,
-
         avatar: user.avatar,
-
         provider: user.provider
-
       }
-
     });
-
-  }
-
-  catch (error) {
-
-    console.error(error);
-
-    return res.status(500).json({
-
-      success: false,
-
-      message: "Google Login Failed"
-
-    });
-
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Google Login Failed" });
   }
 };
 
@@ -421,6 +358,217 @@ export const completeProfile = async (req, res) => {
   }
 };
 
+export const githubLogin = (req, res) => {
+  const { action } = req.query; 
+  const state = crypto.randomBytes(32).toString("hex");
+
+  res.cookie("github_oauth_state", JSON.stringify({ state, action }), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: 10 * 60 * 1000,
+  });
+
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID,
+    redirect_uri: `http://localhost:5000/api/auth/github/callback`,
+    scope: "read:user user:email public_repo",
+    state,
+    prompt: "select_account" // <--- THIS IS THE MAGIC FIX
+  });
+
+  return res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
+};
+
+
+export const githubCallback = async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    const savedCookie = req.cookies.github_oauth_state;
+    const { state: savedState, action } = savedCookie ? JSON.parse(savedCookie) : {};
+    res.clearCookie("github_oauth_state");
+
+    if (!code || !state || state !== savedState) {
+      return res.redirect(`${process.env.CLIENT_URL}/login?error=github_auth_failed`);
+    }
+
+    const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code,
+        redirect_uri: "http://localhost:5000/api/auth/github/callback",
+      }),
+    });
+
+    const tokenData = await tokenResponse.json();
+    if (!tokenData.access_token) return res.redirect(`${process.env.CLIENT_URL}/login?error=github_auth_failed`);
+
+    const githubToken = tokenData.access_token;
+    const githubUserResponse = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    });
+    const githubUser = await githubUserResponse.json();
+
+    // ==========================================
+    // ACTION: CONNECTING FROM DASHBOARD
+    // ==========================================
+    if (action === "connect") {
+       const currentToken = req.cookies.token || req.cookies.accessToken;
+       if (currentToken) {
+         try {
+           const decoded = jwt.verify(currentToken, process.env.JWT_SECRET);
+           // Link the GitHub account in DB, but DO NOT change the Google avatar!
+           await prisma.user.update({
+             where: { id: decoded.id },
+             data: {
+               githubId: String(githubUser.id),
+               githubAccessToken: githubToken
+             }
+           });
+         } catch (err) {}
+       }
+       return res.redirect(`${process.env.CLIENT_URL}/dashboard`); 
+    }
+
+    // ==========================================
+    // ACTION: GITHUB LOGIN/SIGNUP
+    // ==========================================
+    const emailsResponse = await fetch("https://api.github.com/user/emails", {
+      headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" },
+    });
+
+    const emails = await emailsResponse.json();
+    const verifiedEmail = Array.isArray(emails) ? emails.find((item) => item.primary && item.verified)?.email : null;
+
+    if (!verifiedEmail) return res.redirect(`${process.env.CLIENT_URL}/login?error=github_email_required`);
+
+    // Look for existing user by Github ID OR Email (so they share the same account)
+    let user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { githubId: String(githubUser.id) },
+          { email: verifiedEmail }, 
+        ],
+      },
+    });
+
+    if (!user) {
+      // Brand new GitHub account
+      user = await prisma.user.create({
+        data: {
+          email: verifiedEmail,
+          provider: "github",
+          providerId: String(githubUser.id),
+          githubId: String(githubUser.id),
+          githubAccessToken: githubToken,
+          avatar: githubUser.avatar_url,
+          profileCompleted: false, 
+        },
+      });
+    } else {
+      // Auto-link: Update their avatar to GitHub since they chose to log in via GitHub today!
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { 
+          avatar: githubUser.avatar_url,
+          githubId: String(githubUser.id),
+          githubAccessToken: githubToken 
+        }
+      });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    res.cookie("token", token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge: 24 * 60 * 60 * 1000 });
+
+    return res.redirect(`${process.env.CLIENT_URL}/auth/github/callback`);
+  } catch (error) {
+    return res.redirect(`${process.env.CLIENT_URL}/login?error=github_auth_failed`);
+  }
+};
+
+export const getGithubProfile = async (req, res) => {
+  try {
+    // 1. Get the current user ID using the token from cookies
+    const currentToken = req.cookies.token || req.cookies.accessToken;
+    
+    if (!currentToken) {
+      return res.status(401).json({ success: false, message: "Not logged in" });
+    }
+
+    const decoded = jwt.verify(currentToken, process.env.JWT_SECRET);
+    
+    // 2. Find the user in the database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id }
+    });
+
+    // 3. Check if they have a github account linked
+    const githubToken = user?.githubAccessToken;
+
+    if (!githubToken) {
+      return res.status(401).json({ success: false, message: "No GitHub account connected" });
+    }
+
+    // 4. Fetch the data from GitHub
+    const githubResponse = await fetch("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Developer-Collaboration-Platform", // <--- THIS WAS MISSING!
+      },
+    });
+
+    if (!githubResponse.ok) {
+      console.log("GitHub API rejected the request:", githubResponse.status);
+      return res.status(401).json({ success: false, message: "GitHub token invalid or expired" });
+    }
+
+    const githubData = await githubResponse.json();
+    return res.status(200).json({ success: true, data: githubData });
+  } catch (error) {
+    console.error("Error fetching GitHub profile:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+export const getCurrentUser = async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.user.id,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        provider: user.provider,
+        profileCompleted: user.profileCompleted,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Could not fetch the current user.",
+    });
+  }
+};
+
 export const logoutUser = async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
@@ -430,6 +578,7 @@ export const logoutUser = async (req, res) => {
 
   // Google login uses "token".
   res.clearCookie("token", cookieOptions);
+  res.clearCookie("github_access_token", cookieOptions);
 
   // Normal username/password login currently uses these two.
   res.clearCookie("accessToken", cookieOptions);

@@ -1,55 +1,22 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import {
+  GitPullRequest,
+  LoaderCircle,
+  MessageSquare,
+} from "lucide-react";
 import Card from "../../common/Card";
-import { MessageSquare, GitPullRequest } from "lucide-react";
-
-const pullRequestsData = [
-  {
-    id: 144,
-    title: "Add OAuth authentication",
-    author: "Anas S.",
-    status: "Review",
-    comments: 3,
-  },
-  {
-    id: 142,
-    title: "Improve dashboard UI",
-    author: "Sarah J.",
-    status: "Approved",
-    comments: 2,
-  },
-  {
-    id: 141,
-    title: "Fix API rate limit issue",
-    author: "Ankur Y.",
-    status: "Changes Requested",
-    comments: 4,
-  },
-  {
-    id: 140,
-    title: "Update dependencies",
-    author: "Sumit S.",
-    status: "Review",
-    comments: 1,
-  },
-  {
-    id: 139,
-    title: "Add unit tests for utils",
-    author: "Soham K.",
-    status: "Approved",
-    comments: 2,
-  },
-];
+import { getPullRequests } from "../../../services/githubService.js";
 
 const getStatusStyles = (status) => {
   switch (status) {
-    case "Approved":
-      return "bg-green-500/20 text-green-400";
+    case "Draft":
+      return "bg-slate-500/20 text-slate-300";
 
     case "Review":
       return "bg-purple-500/20 text-purple-400";
 
-    case "Changes Requested":
-      return "bg-blue-500/20 text-blue-400";
+    case "Open":
+      return "bg-cyan-500/20 text-cyan-400";
 
     default:
       return "bg-slate-500/20 text-slate-400";
@@ -57,78 +24,110 @@ const getStatusStyles = (status) => {
 };
 
 export const PullRequests = () => {
-  const getStatusStyles = (status) => {
-    switch (status) {
-      case "Approved":
-        return "bg-green-500/20 text-green-400";
+  const [pullRequests, setPullRequests] = useState([]);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
-      case "Review":
-        return "bg-purple-500/20 text-purple-400";
+  useEffect(() => {
+    const loadPullRequests = async () => {
+      try {
+        const result = await getPullRequests();
+        setPullRequests(result.data);
+      } catch (err) {
+        setError(
+          err.response?.data?.message ||
+            "Could not load pull requests."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-      case "Changes Requested":
-        return "bg-blue-500/20 text-blue-400";
-
-      default:
-        return "bg-slate-500/20 text-slate-400";
-    }
-  };
+    loadPullRequests();
+  }, []);
 
   return (
-    <Card className="h-full min-h-[320px] flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-semibold text-slate-100">Pull Requests</h3>
+    <Card className="flex min-h-[320px] h-full flex-col">
+      <div className="mb-2 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-slate-100">
+          Pull Requests
+        </h3>
 
-        <button className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer">
+        <a
+          href="https://github.com/ankuryadavgithub/Developer-Collaboration-Platform/pulls"
+          target="_blank"
+          rel="noreferrer"
+          className="cursor-pointer text-sm text-indigo-400 transition-colors hover:text-indigo-300"
+        >
           View All
-        </button>
+        </a>
       </div>
 
-      {/* PR List */}
-      <div>
-        {pullRequestsData.map((pr) => (
-          <div
-            key={pr.id}
-            className="flex items-start justify-between py-1 border-b border-slate-800 last:border-none hover:bg-slate-800/20 px-2 rounded-lg transition-colors cursor-pointer"
-          >
-            {/* Left */}
-            <div className="flex gap-3 flex-1 min-w-0">
-              <GitPullRequest
-                size={18}
-                className="text-slate-400 mt-1 flex-shrink-0"
-              />
+      {isLoading && (
+        <div className="flex flex-1 items-center justify-center">
+          <LoaderCircle size={24} className="animate-spin text-violet-400" />
+        </div>
+      )}
 
-              <div className="min-w-0">
-                <p className="text-xs text-indigo-400 font-medium">
-                  #{pr.id}
-                </p>
+      {!isLoading && error && (
+        <p className="mt-6 text-center text-sm text-red-400">{error}</p>
+      )}
 
-                <h4 className="text-sm text-slate-100 truncate">
-                  {pr.title}
-                </h4>
+      {!isLoading && !error && pullRequests.length === 0 && (
+        <p className="mt-6 text-center text-sm text-slate-400">
+          No open GitHub pull requests.
+        </p>
+      )}
 
-                <p className="text-[10px] text-slate-400 mt-1">by {pr.author}</p>
+      {!isLoading && !error && pullRequests.length > 0 && (
+        <div>
+          {pullRequests.map((pullRequest) => (
+            <a
+              key={pullRequest.id}
+              href={pullRequest.url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex cursor-pointer items-start justify-between rounded-lg border-b border-slate-800 px-2 py-1 transition-colors last:border-none hover:bg-slate-800/20"
+            >
+              <div className="flex min-w-0 flex-1 gap-3">
+                <GitPullRequest
+                  size={18}
+                  className="mt-1 shrink-0 text-slate-400"
+                />
+
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-indigo-400">
+                    #{pullRequest.id}
+                  </p>
+
+                  <h4 className="truncate text-sm text-slate-100">
+                    {pullRequest.title}
+                  </h4>
+
+                  <p className="mt-1 text-[10px] text-slate-400">
+                    by {pullRequest.author}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            {/* Right */}
-            <div className="flex items-center gap-3 ml-3">
-              <span
-                className={`px-2 py-1 rounded-md text-xs font-medium whitespace-nowrap ${getStatusStyles(
-                  pr.status,
-                )}`}
-              >
-                {pr.status}
-              </span>
+              <div className="ml-3 flex items-center gap-3">
+                <span
+                  className={`whitespace-nowrap rounded-md px-2 py-1 text-xs font-medium ${getStatusStyles(
+                    pullRequest.status
+                  )}`}
+                >
+                  {pullRequest.status}
+                </span>
 
-              <div className="flex items-center gap-1 text-slate-400">
-                <MessageSquare size={14} />
-                <span className="text-xs">{pr.comments}</span>
+                <div className="flex items-center gap-1 text-slate-400">
+                  <MessageSquare size={14} />
+                  <span className="text-xs">{pullRequest.comments}</span>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </a>
+          ))}
+        </div>
+      )}
     </Card>
   );
 };

@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 
 import route from "./routes/auth.routes.js";
+import githubRoutes from "./routes/github.routes.js";
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use(cookieParser());
 
 // Routes
 app.use("/api/auth",route);
+app.use("/api/github", githubRoutes);
 
 // default route
 app.get("/",(req,res) => {

@@ -10,6 +10,7 @@ import eyeOff from "../assets/eyeOff.svg"
 import { GoogleLogin } from "@react-oauth/google";
 import { googleLogin } from "../services/googleAuthService.js";
 import { useNavigationLoading } from "../context/NavigationLoadingContext";
+import { startGithubLogin } from "../services/googleAuthService.js";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -89,7 +90,7 @@ function Login() {
     }
 
     // Safety for a first-time Google user who logs in from this page.
-    navigate("/complete-profile", { replace: true });
+    goTo("/complete-profile", { replace: true });
     } catch (err) {
     setError(
       err.response?.data?.message ||
@@ -259,10 +260,11 @@ function Login() {
               </div>
               <button
                 type="button"
+                onClick={startGithubLogin}
                 className="w-full rounded-xl border border-slate-300 bg-white py-2.5 flex items-center justify-center gap-2 hover:border-violet-300 hover:shadow-sm hover:bg-slate-50 transition-all duration-200 cursor-pointer text-sm font-medium text-slate-700"
               >
-                <img src={githubIcon} alt="Google" className="w-5 h-5" />
-                GitHub
+                <img src={githubIcon} alt="GitHub" className="w-5 h-5" />
+                Continue with GitHub
               </button>
             </div>
 
