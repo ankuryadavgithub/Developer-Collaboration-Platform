@@ -216,7 +216,7 @@ const OrganizationMembers = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      {isAdminOrOwner && member.role !== "OWNER" ? (
+                      {isAdminOrOwner && member.role !== "OWNER" && !(currentOrg?.myRole === "ADMIN" && member.role === "ADMIN") ? (
                         <select
                           className="bg-[#0f111a] text-sm text-white font-semibold rounded p-1 border border-slate-700 outline-none cursor-pointer"
                           value={member.role}
@@ -224,7 +224,7 @@ const OrganizationMembers = () => {
                             handleRoleChange(member.id, e.target.value)
                           }
                         >
-                          <option value="ADMIN">Admin</option>
+                          {currentOrg?.myRole === "OWNER" && <option value="ADMIN">Admin</option>}
                           <option value="MANAGER">Manager</option>
                           <option value="MEMBER">Member</option>
                         </select>
@@ -247,7 +247,7 @@ const OrganizationMembers = () => {
                     </td>
                     {isAdminOrOwner && (
                       <td className="p-4 text-right">
-                        {member.role !== "OWNER" && (
+                        {member.role !== "OWNER" && !(currentOrg?.myRole === "ADMIN" && member.role === "ADMIN") && (
                           <button
                             onClick={() => handleRemoveMember(member.id)}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"

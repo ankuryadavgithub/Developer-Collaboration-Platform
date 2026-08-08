@@ -4,11 +4,15 @@ import { useOrganization } from "../../context/OrganizationContext";
 import {useState} from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 
-function Sidebar({ isOpen, setIsOpen, user }) {
+function Sidebar({ isOpen, setIsOpen }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { orgId, workspaceId } = useParams();
   const navigate = useNavigate();
   const { organizations, currentOrg, switchOrganization, loading } = useOrganization();
+  
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+
     return (
       <>
         {isOpen && (

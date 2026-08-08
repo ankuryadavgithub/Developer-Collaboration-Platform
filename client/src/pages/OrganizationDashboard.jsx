@@ -41,6 +41,9 @@ const OrganizationDashboard = () => {
     }
   };
 
+  const userStr = localStorage.getItem("user");
+  const user = userStr ? JSON.parse(userStr) : null;
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   if (loading)
@@ -50,7 +53,7 @@ const OrganizationDashboard = () => {
   if (!currentOrg) {
     return (
       <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-[#111827] to-indigo-950">
-        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+        <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} user={user} />
         <main className="flex-1 p-4 w-full h-full overflow-y-auto min-w-0">
           <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
           <div className="text-white max-w-xl mx-auto mt-16">
@@ -107,7 +110,7 @@ const OrganizationDashboard = () => {
   // View 2: User has an organization selected!
   return (
     <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-[#111827] to-indigo-950">
-      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} user={user} />
       <main className="flex-1 p-4 md:p-8 w-full h-full overflow-y-auto min-w-0">
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
         <div className="text-white max-w-5xl mx-auto mt-10">
