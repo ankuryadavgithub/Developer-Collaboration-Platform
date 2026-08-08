@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { CircleAlert, LoaderCircle } from "lucide-react";
 import Card from "../../common/Card";
-import { getOpenIssues } from "../../../services/githubService.js";
+import axios from "axios";
 
 const getPriorityStyles = (priority) => {
   switch (priority) {
@@ -41,7 +41,7 @@ const getIconStyles = (priority) => {
   }
 };
 
-export const OpenIssues = () => {
+export const OpenIssues = ({ orgId, workspaceId }) => {
   const [issues, setIssues] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -49,8 +49,8 @@ export const OpenIssues = () => {
   useEffect(() => {
     const loadIssues = async () => {
       try {
-        const result = await getOpenIssues();
-        setIssues(result.data);
+        const result = await axios.get(`http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/github/issues`, { withCredentials: true });
+        setIssues(result.data.data);
       } catch (err) {
         setError(
           err.response?.data?.message || "Could not load open issues."
@@ -67,15 +67,6 @@ export const OpenIssues = () => {
     <Card className="flex min-h-[320px] h-full flex-col">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-lg font-semibold text-slate-100">Open Issues</h3>
-
-        <a
-          href="https://github.com/ankuryadavgithub/Developer-Collaboration-Platform/issues"
-          target="_blank"
-          rel="noreferrer"
-          className="cursor-pointer text-sm text-indigo-400 transition-colors hover:text-indigo-300"
-        >
-          View All
-        </a>
       </div>
 
       {isLoading && (

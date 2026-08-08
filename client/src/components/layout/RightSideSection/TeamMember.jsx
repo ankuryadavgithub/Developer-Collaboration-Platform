@@ -80,7 +80,7 @@ export default function TeamMember() {
                 <p className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors">
                   {member.name}
                 </p>
-                <p className="text-xs text-[#8b92a5]">{member.role}</p>
+                <p className="text-xs text-[#8b92a5]">{member.jobTitle}</p>
               </div>
             </div>
 

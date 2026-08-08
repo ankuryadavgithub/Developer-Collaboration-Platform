@@ -1,31 +1,31 @@
-// server/src/routes/github.routes.js
-
 import express from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { requireWorkspaceMember } from "../middleware/workspace.middleware.js";
 import {
   getCurrentSprint,
   getOpenIssues,
   getPullRequests,
+  getAccessibleRepositories,
 } from "../controllers/github.controller.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
+// Workspace-scoped GitHub routes
 router.get(
-  "/repos/:owner/:repo/current-sprint",
+  "/current-sprint",
   requireAuth,
-  getCurrentSprint
+  requireWorkspaceMember,
+  getCurrentSprint,
+);
+router.get("/issues", requireAuth, requireWorkspaceMember, getOpenIssues);
+router.get(
+  "/pull-requests",
+  requireAuth,
+  requireWorkspaceMember,
+  getPullRequests,
 );
 
-router.get(
-  "/repos/:owner/:repo/issues",
-  requireAuth,
-  getOpenIssues
-);
-
-router.get(
-  "/repos/:owner/:repo/pull-requests",
-  requireAuth,
-  getPullRequests
-);
+// Global user routes
+router.get("/repositories", requireAuth, getAccessibleRepositories);
 
 export default router;

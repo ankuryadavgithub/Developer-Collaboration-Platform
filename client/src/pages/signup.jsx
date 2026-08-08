@@ -1,7 +1,7 @@
 // signup.jsx
 
 import { Link } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Mail, Lock, User, ArrowRight, UserRoundCheck } from "lucide-react";
 import googleIcon from "../assets/google.svg";
 import githubIcon from "../assets/github.svg";
 import eyeOn from "../assets/eyeOn.svg";
@@ -18,7 +18,7 @@ function Signup() {
   const [ConfirmPassword,setConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: "",
-    roleSelect: "",
+    jobTitleSelect: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -44,24 +44,23 @@ function Signup() {
        return setError("Password must be at least 8 chars, with 1 number and 1 special char.");
      if (formData.password !== formData.confirmPassword)
        return setError("Passwords do not match!");
-     if (!formData.roleSelect) 
-      return setError("Please select a role.");
+     if (!formData.jobTitleSelect) {
+      return setError("Please select a job title.");
+     }
 
 
     try{
       setIsLoading(true);
-      const response = await fetch("http://localhost:5000/api/auth/register",
-        {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({
-            username: formData.username,
-            role: formData.roleSelect,
-            email: formData.email,
-            password: formData.password,
-          }),
-        }
-      );
+      const response = await fetch("http://localhost:5000/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: formData.username,
+          jobTitle: formData.jobTitleSelect,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
       const data = await response.json();
 
@@ -116,7 +115,7 @@ function Signup() {
               Join the developer community today.
             </p>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
-            {/* Username & Role */}
+            {/* Username & Job Title */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label
@@ -142,29 +141,28 @@ function Signup() {
 
               <div>
                 <label
-                  htmlFor="roleSelect"
+                  htmlFor="jobTitleSelect"
                   className="block text-sm font-semibold text-slate-700 mb-1.5"
                 >
-                  Role
+                  Job Title
                 </label>
-                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-2.5 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                  <UserRoundCheck size={18} className="text-violet-500 shrink-0" />
                   <select
-                    id="roleSelect"
-                    required
-                    value={formData.roleSelect}
+                    id="jobTitleSelect"
+                    value={formData.jobTitleSelect || ""}
                     onChange={handleChange}
-                    className="w-full appearance-none bg-transparent outline-none text-slate-700 cursor-pointer text-sm sm:text-base"
+                    className="ml-3 w-full bg-transparent outline-none text-slate-700 text-sm sm:text-base cursor-pointer appearance-none"
+                    required
                   >
-                    <option value="">Select your role</option>
+                    <option value="" disabled className="text-slate-400">
+                      Select your role
+                    </option>
                     <option value="project_manager">Project Manager</option>
                     <option value="developer">Developer</option>
-                    <option value="frontend_developer">
-                      Frontend Developer
-                    </option>
+                    <option value="frontend_developer">Frontend Developer</option>
                     <option value="backend_developer">Backend Developer</option>
-                    <option value="fullstack_developer">
-                      Full Stack Developer
-                    </option>
+                    <option value="fullstack_developer">Full Stack Developer</option>
                   </select>
                 </div>
               </div>
@@ -318,7 +316,7 @@ function Signup() {
                 onSuccess={async (credentialResponse) => {
                   try {
                     const result = await googleLogin(
-                      credentialResponse.credential
+                      credentialResponse.credential,
                     );
 
                     localStorage.setItem(
@@ -326,15 +324,14 @@ function Signup() {
                       JSON.stringify({
                         ...result.user,
                         profileCompleted: result.profileCompleted,
-                      })
+                      }),
                     );
 
                     if (result.profileCompleted) {
-                      goTo("/dashboard", { replace: true });
+                      goTo("/organization", { replace: true });
                     } else {
                       goTo("/complete-profile", { replace: true });
                     }
-
                   } catch (error) {
                     console.error(error);
                   }

@@ -88,7 +88,7 @@ const HealthMetric = ({ title, value, type, progress, color, chartColor }) => {
   );
 };
 
-const RepositoryHealth = () => {
+const RepositoryHealth = ({ orgId, workspaceId }) => {
   return (
     <div className="w-full bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
       {/* Header */}

@@ -17,7 +17,7 @@ function GithubCallback() {
         localStorage.setItem("user", JSON.stringify(result.user));
 
         if (result.user.profileCompleted) {
-          navigate("/dashboard", { replace: true });
+          navigate("/organization", { replace: true });
         } else {
           navigate("/complete-profile", { replace: true });
         }

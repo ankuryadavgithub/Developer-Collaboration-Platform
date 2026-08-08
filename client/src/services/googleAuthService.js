@@ -16,12 +16,12 @@ export const googleLogin = async (credential) => {
   return response.data;
 };
 
-export const completeProfile = async ({ username, role }) => {
+export const completeProfile = async ({ username, jobTitle }) => {
   const response = await axios.post(
     `${API_URL}/complete-profile`,
     {
       username,
-      role,
+      jobTitle,
     },
     {
       withCredentials: true,

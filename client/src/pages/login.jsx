@@ -52,7 +52,7 @@ function Login() {
 
         localStorage.setItem("user", JSON.stringify(response.data.data));
 
-        goTo("/dashboard", { replace: true });;
+        goTo("/organization", { replace: true });;
       }
 
     } catch (err) {
@@ -85,7 +85,7 @@ function Login() {
 
     // A completed Google user logs in directly to the dashboard.
     if (result.profileCompleted) {
-      goTo("/dashboard", { replace: true });;
+      goTo("/organization", { replace: true });;
       return;
     }
 

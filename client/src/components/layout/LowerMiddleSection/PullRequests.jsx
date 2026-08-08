@@ -5,7 +5,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import Card from "../../common/Card";
-import { getPullRequests } from "../../../services/githubService.js";
+import axios from "axios";
 
 const getStatusStyles = (status) => {
   switch (status) {
@@ -23,7 +23,7 @@ const getStatusStyles = (status) => {
   }
 };
 
-export const PullRequests = () => {
+export const PullRequests = ({ orgId, workspaceId }) => {
   const [pullRequests, setPullRequests] = useState([]);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -31,8 +31,8 @@ export const PullRequests = () => {
   useEffect(() => {
     const loadPullRequests = async () => {
       try {
-        const result = await getPullRequests();
-        setPullRequests(result.data);
+        const result = await axios.get(`http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/github/pull-requests`, { withCredentials: true });
+        setPullRequests(result.data.data);
       } catch (err) {
         setError(
           err.response?.data?.message ||
@@ -52,15 +52,6 @@ export const PullRequests = () => {
         <h3 className="text-lg font-semibold text-slate-100">
           Pull Requests
         </h3>
-
-        <a
-          href="https://github.com/ankuryadavgithub/Developer-Collaboration-Platform/pulls"
-          target="_blank"
-          rel="noreferrer"
-          className="cursor-pointer text-sm text-indigo-400 transition-colors hover:text-indigo-300"
-        >
-          View All
-        </a>
       </div>
 
       {isLoading && (

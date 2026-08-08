@@ -19,7 +19,7 @@ export const requireAuth = (req, res, next) => {
     req.user = {
       id: decoded.id,
       email: decoded.email,
-      role: decoded.role,
+      platformRole: decoded.platformRole,
       username: decoded.username,
     };
 
@@ -30,4 +30,17 @@ export const requireAuth = (req, res, next) => {
       message: "Your session has expired. Please log in again.",
     });
   }
+};
+
+// Require PLATFORM_ADMIN Role
+export const requirePlatformAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Unauthorized: Please log in." });
+  }
+  
+  if (req.user.platformRole !== "PLATFORM_ADMIN") {
+    return res.status(403).json({ success: false, message: "Forbidden: Platform Admin access required." });
+  }
+  
+  next();
 };

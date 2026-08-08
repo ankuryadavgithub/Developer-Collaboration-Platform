@@ -2,34 +2,41 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, ArrowRight } from "lucide-react";
+import { User, ArrowRight, Briefcase } from "lucide-react";
 import { completeProfile } from "../services/googleAuthService.js";
 import { useNavigationLoading } from "../context/NavigationLoadingContext";
 
 function CompleteProfile() {
-  const [username, setUsername] = useState("");
-  const [role, setRole] = useState("");
+  const [formData, setFormData] = useState({
+    username: "",
+    jobTitle: "",
+  });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const { goTo } = useNavigationLoading();
 
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
 
-    if (username.trim().length < 3) {
+    if (formData.username.trim().length < 3) {
       setError("Username must be at least 3 characters.");
       return;
     }
 
-    if (username.includes(" ")) {
+    if (formData.username.includes(" ")) {
       setError("Username cannot contain spaces.");
       return;
     }
 
-    if (!role) {
-      setError("Please select a role.");
+    if (!formData.jobTitle) {
+      setError("Please select a job title.");
       return;
     }
 
@@ -37,14 +44,14 @@ function CompleteProfile() {
       setIsLoading(true);
 
       const result = await completeProfile({
-        username,
-        role,
+        username: formData.username,
+        jobTitle: formData.jobTitle,
       });
 
       // Updates the frontend login state used by ProtectedRoute.
       localStorage.setItem("user", JSON.stringify(result.user));
 
-      goTo("/dashboard", { replace: true });
+      goTo("/organization", { replace: true });
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -90,8 +97,8 @@ function CompleteProfile() {
               <input
                 id="username"
                 type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
+                value={formData.username}
+                onChange={handleChange}
                 placeholder="Choose a username"
                 minLength={3}
                 required
@@ -100,28 +107,35 @@ function CompleteProfile() {
             </div>
           </div>
 
-          <div className="mb-7">
-            <label
-              htmlFor="role"
-              className="mb-1.5 block text-sm font-semibold text-slate-700"
-            >
-              Role
-            </label>
-
-            <select
-              id="role"
-              value={role}
-              onChange={(event) => setRole(event.target.value)}
-              required
-              className="w-full cursor-pointer rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-700 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-300 sm:text-base"
-            >
-              <option value="">Select your role</option>
-              <option value="project_manager">Project Manager</option>
-              <option value="developer">Developer</option>
-              <option value="frontend_developer">Frontend Developer</option>
-              <option value="backend_developer">Backend Developer</option>
-              <option value="fullstack_developer">Full Stack Developer</option>
-            </select>
+          {/* Job Title Select */}
+          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4 mb-4">
+            <div>
+              <label
+                htmlFor="jobTitle"
+                className="block text-sm font-semibold text-slate-700 mb-1.5"
+              >
+                Job Title
+              </label>
+              <div className="flex items-center bg-white border border-slate-300 rounded-xl px-3.5 py-3 hover:border-violet-300 focus-within:border-violet-500 focus-within:ring-2 focus-within:ring-violet-300 transition-all duration-200">
+                <Briefcase size={18} className="text-violet-500 shrink-0" />
+                <select
+                  id="jobTitle"
+                  value={formData.jobTitle}
+                  onChange={handleChange}
+                  className="ml-3 w-full bg-transparent outline-none placeholder:text-slate-400 text-sm sm:text-base cursor-pointer"
+                  required
+                >
+                  <option value="" disabled>
+                    Select your job title
+                  </option>
+                  <option value="project_manager">Project Manager</option>
+                  <option value="developer">Developer</option>
+                  <option value="frontend_developer">Frontend Developer</option>
+                  <option value="backend_developer">Backend Developer</option>
+                  <option value="fullstack_developer">Fullstack Developer</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           <button

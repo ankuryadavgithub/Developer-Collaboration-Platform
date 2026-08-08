@@ -17,9 +17,9 @@ const googleClient = new OAuth2Client(
 
 export const registerUser = async(req,res) => {
   try {
-    const { username, email, role, password } = req.body;
+    const { username, email, jobTitle, password } = req.body;
 
-    if (!username || !email || !role || !password) {
+    if (!username || !email || !jobTitle || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required.",
@@ -51,17 +51,17 @@ export const registerUser = async(req,res) => {
       });
     }
 
-    const validRoles = [
+    const validJobTitles = [
       "project_manager",
       "developer",
       "frontend_developer",
       "backend_developer",
       "fullstack_developer",
     ];
-    if (!validRoles.includes(role)) {
+    if (!validJobTitles.includes(jobTitle)) {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid role selected." });
+        .json({ success: false, message: "Invalid job title selected." });
     }
 
     const existingUser = await prisma.user.findFirst({
@@ -84,7 +84,7 @@ export const registerUser = async(req,res) => {
       data: {
         username,
         email,
-        role,
+        jobTitle,
         password: hashedPassword,
         profileCompleted: true,
       },
@@ -97,7 +97,8 @@ export const registerUser = async(req,res) => {
         id: newUser.id,
         username: newUser.username,
         email: newUser.email,
-        role: newUser.role,
+        jobTitle: newUser.jobTitle,
+        platformRole: newUser.platformRole,
       },
     });
   } catch (error) {
@@ -202,7 +203,8 @@ export const loginUser = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
+        jobTitle: user.jobTitle,
+        platformRole: user.platformRole,
       },
     });
   } catch (error) {
@@ -269,9 +271,10 @@ export const googleLogin = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
-        avatar: user.avatar
-      }
+        jobTitle: user.jobTitle,
+        avatar: user.avatar,
+        platformRole: user.platformRole,
+      },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Google Login Failed" });
@@ -281,12 +284,12 @@ export const googleLogin = async (req, res) => {
 export const completeProfile = async (req, res) => {
   try {
     const username = req.body.username?.trim();
-    const { role } = req.body;
+    const { jobTitle } = req.body;
 
-    if (!username || !role) {
+    if (!username || !jobTitle) {
       return res.status(400).json({
         success: false,
-        message: "Username and role are required.",
+        message: "Username and job title are required.",
       });
     }
 
@@ -297,7 +300,7 @@ export const completeProfile = async (req, res) => {
       });
     }
 
-    const validRoles = [
+    const validJobTitles = [
       "project_manager",
       "developer",
       "frontend_developer",
@@ -305,10 +308,10 @@ export const completeProfile = async (req, res) => {
       "fullstack_developer",
     ];
 
-    if (!validRoles.includes(role)) {
+    if (!validJobTitles.includes(jobTitle)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid role selected.",
+        message: "Invalid job title selected.",
       });
     }
 
@@ -327,7 +330,7 @@ export const completeProfile = async (req, res) => {
       where: { id: req.user.id },
       data: {
         username,
-        role,
+        jobTitle,
         profileCompleted: true,
       },
     });
@@ -339,9 +342,10 @@ export const completeProfile = async (req, res) => {
         id: updatedUser.id,
         username: updatedUser.username,
         email: updatedUser.email,
-        role: updatedUser.role,
+        jobTitle: updatedUser.jobTitle,
         avatar: updatedUser.avatar,
         profileCompleted: updatedUser.profileCompleted,
+        platformRole: updatedUser.platformRole,
       },
     });
   } catch (error) {
@@ -563,9 +567,10 @@ export const getCurrentUser = async (req, res) => {
         id: user.id,
         username: user.username,
         email: user.email,
-        role: user.role,
+        jobTitle: user.jobTitle,
         avatar: user.avatar,
         profileCompleted: user.profileCompleted,
+        platformRole: user.platformRole,
       },
     });
   } catch (error) {

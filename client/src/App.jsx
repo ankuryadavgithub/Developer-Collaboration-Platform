@@ -8,9 +8,16 @@ import {
 import Login from "./pages/login";
 import Signup from "./pages/signup";
 import Forgotpassword from "./pages/forgotpassword";
-import Dashboard from "./pages/dashboard";
+import WorkspaceDashboard from "./pages/WorkspaceDashboard";
 import CompleteProfile from "./pages/completeProfile";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
+import AdminDashboard from "./pages/AdminDashboard";
+import OrganizationDashboard from "./pages/OrganizationDashboard";
+import OrganizationMembers from "./pages/OrganizationMembers";
+import Workspaces from "./pages/Workspaces";
+import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
+import WorkspaceDetails from "./pages/WorkspaceDetails";
 import PageLoader from "./components/common/PageLoader";
 import {
   NavigationLoadingProvider,
@@ -18,6 +25,9 @@ import {
 } from "./context/NavigationLoadingContext";
 import "./index.css";
 import GithubCallback from "./pages/githubCallback";
+import Projects from "./pages/Projects";
+import Sprints from "./pages/Sprints";
+import TasksKanban from "./pages/TasksKanban";
 
 function AppRoutes() {
   const location = useLocation();
@@ -80,15 +90,92 @@ function AppRoutes() {
         />
 
         <Route
-          path="/dashboard"
+          path="/organizations/:orgId/workspaces/:workspaceId/dashboard"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <WorkspaceDashboard />
             </ProtectedRoute>
           }
         />
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/projects"
+          element={
+            <ProtectedRoute>
+              <Projects />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/sprints"
+          element={
+            <ProtectedRoute>
+              <Sprints />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/tasks"
+          element={
+            <ProtectedRoute>
+              <TasksKanban />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Organization Routes Protected by Auth */}
+        <Route
+          path="/organization"
+          element={
+            <ProtectedRoute>
+              <OrganizationDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/workspaces"
+          element={
+            <ProtectedRoute>
+              <Workspaces />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId"
+          element={
+            <ProtectedRoute>
+              <WorkspaceDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/create"
+          element={
+            <ProtectedRoute>
+              <CreateWorkspaceWizard />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/members"
+          element={
+            <ProtectedRoute>
+              <OrganizationMembers />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route element={<ProtectedAdminRoute />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/organization" replace />} />
       </Routes>
     </div>
   );
