@@ -133,22 +133,27 @@ export const loginUser = async (req, res) => {
     formData.append("secret", process.env.TURNSTILE_SECRET_KEY);
     formData.append("response", turnstileToken);
 
-    const verficationResponse = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        body: formData,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      },
-    );
+    // Bypass CAPTCHA in development mode for Postman testing
+    if (process.env.NODE_ENV !== "production" && turnstileToken === "bypass") {
+      console.log("Bypassing CAPTCHA for development testing.");
+    } else {
+      const verificationResponse = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          body: formData,
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        },
+      );
 
-    const verficationData = await verficationResponse.json();
+      const verificationData = await verificationResponse.json();
 
-    if (!verficationData.success) {
-      return res.status(403).json({
-        success: false,
-        message: "CAPTCHA validation failed. Please try again.",
-      });
+      if (!verificationData.success) {
+        return res.status(403).json({
+          success: false,
+          message: "CAPTCHA validation failed. Please try again.",
+        });
+      }
     }
     const user = await prisma.user.findFirst({
       where: { username },

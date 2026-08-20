@@ -18,6 +18,7 @@ import OrganizationMembers from "./pages/OrganizationMembers";
 import Workspaces from "./pages/Workspaces";
 import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
 import WorkspaceDetails from "./pages/WorkspaceDetails";
+import Invitations from "./pages/Invitations";
 import PageLoader from "./components/common/PageLoader";
 import {
   NavigationLoadingProvider,
@@ -167,6 +168,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <OrganizationMembers />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/invitations"
+          element={
+            <ProtectedRoute>
+              <Invitations />
             </ProtectedRoute>
           }
         />
