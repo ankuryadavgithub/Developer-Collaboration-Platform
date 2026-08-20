@@ -133,18 +133,24 @@ export const loginUser = async (req, res) => {
     formData.append("secret", process.env.TURNSTILE_SECRET_KEY);
     formData.append("response", turnstileToken);
 
-    const verficationResponse = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        body: formData,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      },
-    );
+    let verificationData;
 
-    const verficationData = await verficationResponse.json();
+    if(process.env.NODE_ENV!=="production" && turnstileToken==="bypass") {
+      console.log("Bypass turnstile for testing purposes...")
+      verificationData = { success: true };
+    }else {
+      const verficationResponse = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        {
+          method: "POST",
+          body: formData,
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        },
+      );
+      verificationData = await verificationResponse.json();
+    }
 
-    if (!verficationData.success) {
+    if (!verificationData.success) {
       return res.status(403).json({
         success: false,
         message: "CAPTCHA validation failed. Please try again.",
