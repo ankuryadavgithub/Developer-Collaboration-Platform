@@ -27,6 +27,20 @@ export const createWorkspace = async (req, res) => {
         });
     }
 
+    const existingWorkspace = await prisma.workspace.findFirst({
+      where: {
+        organizationId: orgId,
+        name: name,
+      },
+    });
+
+    if (existingWorkspace) {
+      return res.status(409).json({
+        success: false,
+        message: "A workspace with this name already exists in the organization.",
+      });
+    }
+
     let repoData = null;
 
     // --- STEP 1: External GitHub API Operations ---

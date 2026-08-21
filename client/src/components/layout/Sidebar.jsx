@@ -90,7 +90,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Issues / Tasks
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <GitPullRequestArrow
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -101,7 +101,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Pull Requests
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <GitCommitHorizontalIcon
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -123,7 +123,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Sprints
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <GitBranchMinusIcon
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -134,7 +134,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   CI/CD
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <BookOpenText size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -142,7 +142,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Wiki
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <MessageCircle size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -150,7 +150,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Chat
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <Calendar size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -158,7 +158,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Calender
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <UserRound size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -166,7 +166,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Team
                 </span>
               </div>
-              <div className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
                 <Settings size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -190,6 +190,7 @@ function Sidebar({ isOpen, setIsOpen }) {
               </span>
             </div>
             <div
+              onClick={() => alert("Coming Soon!")}
               className={`p-2 flex items-center rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer ${isCollapsed ? "justify-center" : "gap-2"}`}
             >
               <CircleUserRound size={20} className="shrink-0" />

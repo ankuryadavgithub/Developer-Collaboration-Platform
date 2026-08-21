@@ -4,9 +4,8 @@ import { Link, useParams } from "react-router-dom";
 
 export const ProjectOverview = ({ projects }) => {
   const { orgId, workspaceId } = useParams();
-  const activeProject = projects && projects.length > 0 ? projects[0] : null;
 
-  if (!activeProject) {
+  if (!projects || projects.length === 0) {
     return (
       <Card className="h-full min-h-[320px] flex flex-col items-center justify-center text-center">
         <h3 className="text-lg font-semibold text-slate-100 mb-2">Project Overview</h3>
@@ -22,36 +21,36 @@ export const ProjectOverview = ({ projects }) => {
   }
 
   return (
-    <Card className="h-full min-h-[320px] flex flex-col justify-between">
-      <div className="flex items-center justify-between">
+    <Card className="h-full min-h-[320px] flex flex-col">
+      <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-slate-100">
           Project Overview
         </h3>
         <Link to={`/organizations/${orgId}/workspaces/${workspaceId}/projects`} className="text-sm text-blue-400 hover:text-blue-300">View All</Link>
       </div>
-      <div className="mt-5 flex gap-3">
-        <div className="w-10 h-10 rounded-xl bg-purple-600 flex items-center justify-center text-white font-bold text-lg uppercase shadow-lg shadow-purple-500/20">
-          {activeProject.name.charAt(0)}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-base font-semibold text-white truncate">{activeProject.name}</h4>
-          <p className="mt-1 text-sm text-slate-400 line-clamp-2">{activeProject.description || "No description provided."}</p>
-        </div>
-      </div>
-      <div className="mt-6">
-        <p className="text-sm text-slate-400 flex justify-between">
-          <span>Overall Progress</span>
-          <span className="text-white font-medium">{activeProject.progress}%</span>
-        </p>
 
-        <div className="mt-2 flex items-center gap-3">
-          <div className="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-cyan-500 rounded-full transition-all duration-500"
-              style={{ width: `${activeProject.progress}%` }}
-            />
+      <div className="flex flex-col gap-4 overflow-y-auto pr-1">
+        {projects.map(project => (
+          <div key={project.id} className="bg-slate-800/30 p-3 rounded-xl border border-slate-700/50 hover:border-slate-600 transition-colors">
+            <div className="flex gap-3 items-center">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold text-sm uppercase">
+                {project.name.charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-semibold text-white truncate">{project.name}</h4>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-indigo-500 rounded-full transition-all duration-500"
+                      style={{ width: `${project.progress}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium w-6 text-right">{project.progress}%</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
       </div>
     </Card>
   );

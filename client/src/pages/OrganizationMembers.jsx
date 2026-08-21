@@ -18,10 +18,46 @@ const OrganizationMembers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [inviting, setInviting] = useState(false);
+  const [selectedRole, setSelectedRole] = useState("MEMBER");
+  const [pendingInvitations, setPendingInvitations] = useState([]);
+
+
+    const fetchPendingInvitations = async () => {
+      try {
+        const res = await axios.get(
+          `http://localhost:5000/api/invitations/org/${orgId}`,
+          { withCredentials: true },
+        );
+        if (res.data.success) {
+          // We only want to show PENDING invites in the table
+          setPendingInvitations(
+            res.data.data.filter((inv) => inv.status === "PENDING"),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch pending invitations");
+      }
+    };
 
   useEffect(() => {
     fetchMembers();
+    fetchPendingInvitations();
   }, [orgId]);
+
+   const handleCancelInvitation = async (invitationId) => {
+     if (!window.confirm("Are you sure you want to cancel this invitation?"))
+       return;
+     try {
+       await axios.delete(
+         `http://localhost:5000/api/invitations/org/${orgId}/${invitationId}`,
+         { withCredentials: true },
+       );
+       fetchPendingInvitations(); // Refresh the table
+     } catch (error) {
+       alert("Failed to cancel invitation");
+     }
+   };
+
 
   const fetchMembers = async () => {
     try {
@@ -57,11 +93,12 @@ const OrganizationMembers = () => {
       setInviting(true);
       await axios.post(
         `http://localhost:5000/api/invitations/org/${orgId}`,
-        { userId },
+        { userId, role: selectedRole },
         { withCredentials: true },
       );
       alert("Invitation sent successfully!");
       setSearchResults(searchResults.filter((u) => u.id !== userId)); // Remove them from search results
+      fetchPendingInvitations();
     } catch (error) {
       alert(error.response?.data?.message || "Failed to invite user");
     } finally {
@@ -167,17 +204,64 @@ const OrganizationMembers = () => {
                           <p className="text-sm text-slate-400">{user.email}</p>
                         </div>
                       </div>
-                      <button
-                        onClick={() => handleInviteUser(user.id)}
-                        disabled={inviting}
-                        className="bg-slate-800 hover:bg-blue-600 text-white py-1 px-4 rounded-full text-sm font-semibold transition-colors cursor-pointer"
-                      >
-                        Invite
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <select
+                          className="bg-[#0f111a] border border-slate-700 text-sm text-slate-300 rounded p-1.5 outline-none cursor-pointer"
+                          value={selectedRole}
+                          onChange={(e) => setSelectedRole(e.target.value)}
+                        >
+                          <option value="MEMBER">Member</option>
+                          <option value="MANAGER">Manager</option>
+                          <option value="ADMIN">Admin</option>
+                        </select>
+
+                        <button
+                          onClick={() => handleInviteUser(user.id)}
+                          disabled={inviting}
+                          className="bg-slate-800 hover:bg-blue-600 text-white py-1 px-4 rounded-full text-sm font-semibold transition-colors cursor-pointer"
+                        >
+                          Invite
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {isAdminOrOwner && pendingInvitations.length > 0 && (
+            <div className="bg-[#1c1f2e] p-6 rounded-xl border border-[#ffffff]/10 mb-8 shadow-lg">
+              <h2 className="text-xl font-bold mb-4">Pending Invitations</h2>
+              <div className="bg-[#0f111a] border border-slate-700 rounded-lg overflow-hidden">
+                {pendingInvitations.map((invite) => (
+                  <div key={invite.id} className="flex items-center justify-between p-4 border-b border-slate-700 last:border-0 hover:bg-[#1c1f2e]">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={invite.invitedUser.avatar || `https://ui-avatars.com/api/?name=${invite.invitedUser.username}`}
+                        alt="Avatar"
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <div>
+                        <p className="font-bold">{invite.invitedUser.username}</p>
+                        <div className="flex items-center gap-2 text-sm text-slate-400 mt-0.5">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-500">PENDING</span>
+                          <span>•</span>
+                          <span>Role: {invite.role}</span>
+                          <span>•</span>
+                          <span>Sent: {new Date(invite.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCancelInvitation(invite.id)}
+                      className="text-sm font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-3 py-1.5 rounded transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -216,7 +300,12 @@ const OrganizationMembers = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      {isAdminOrOwner && member.role !== "OWNER" && !(currentOrg?.myRole === "ADMIN" && member.role === "ADMIN") ? (
+                      {isAdminOrOwner &&
+                      member.role !== "OWNER" &&
+                      !(
+                        currentOrg?.myRole === "ADMIN" &&
+                        member.role === "ADMIN"
+                      ) ? (
                         <select
                           className="bg-[#0f111a] text-sm text-white font-semibold rounded p-1 border border-slate-700 outline-none cursor-pointer"
                           value={member.role}
@@ -224,7 +313,9 @@ const OrganizationMembers = () => {
                             handleRoleChange(member.id, e.target.value)
                           }
                         >
-                          {currentOrg?.myRole === "OWNER" && <option value="ADMIN">Admin</option>}
+                          {currentOrg?.myRole === "OWNER" && (
+                            <option value="ADMIN">Admin</option>
+                          )}
                           <option value="MANAGER">Manager</option>
                           <option value="MEMBER">Member</option>
                         </select>
@@ -247,15 +338,19 @@ const OrganizationMembers = () => {
                     </td>
                     {isAdminOrOwner && (
                       <td className="p-4 text-right">
-                        {member.role !== "OWNER" && !(currentOrg?.myRole === "ADMIN" && member.role === "ADMIN") && (
-                          <button
-                            onClick={() => handleRemoveMember(member.id)}
-                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
-                            title="Remove Member"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
+                        {member.role !== "OWNER" &&
+                          !(
+                            currentOrg?.myRole === "ADMIN" &&
+                            member.role === "ADMIN"
+                          ) && (
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                              title="Remove Member"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
                       </td>
                     )}
                   </tr>

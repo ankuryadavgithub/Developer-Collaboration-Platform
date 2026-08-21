@@ -44,7 +44,7 @@ export const PullRequests = ({ orgId, workspaceId }) => {
     };
 
     loadPullRequests();
-  }, []);
+  }, [orgId, workspaceId]);
 
   return (
     <Card className="flex min-h-[320px] h-full flex-col">

@@ -7,6 +7,8 @@ import {
   getMyInvitations,
   acceptInvitation,
   rejectInvitation,
+  getOrgInvitations,
+  cancelInvitation
 } from "../controllers/invitation.controller.js";
 
 const router = express.Router();
@@ -17,6 +19,8 @@ router.use(requireAuth);
 // Notice requireOrgAdmin ensures they can't invite people to an org they don't own!
 router.get("/org/:orgId/search", requireOrgAdmin, searchUsersToInvite);
 router.post("/org/:orgId", requireOrgAdmin, createInvitation);
+router.get("/org/:orgId", requireOrgAdmin, getOrgInvitations);
+router.delete("/org/:orgId/:invitationId", requireOrgAdmin, cancelInvitation);
 
 // Routes for the individual user to manage their own inbox
 router.get("/mine", getMyInvitations);

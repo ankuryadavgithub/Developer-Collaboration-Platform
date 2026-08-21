@@ -97,6 +97,32 @@ export const getWorkspaceDashboardData = async (req, res) => {
       take: 10,
     });
 
+    // 4.5 Fetch Open Bugs from GitHub
+    let openBugsCount = 0;
+    try {
+      if (workspace.repository) {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        if (user && user.githubAccessToken) {
+          const owner = workspace.repository.owner;
+          const repo = workspace.repository.name;
+          const searchRes = await fetch(`https://api.github.com/search/issues?q=repo:${owner}/${repo}+type:issue+state:open+label:bug`, {
+            headers: {
+              Authorization: `Bearer ${user.githubAccessToken}`,
+              Accept: "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "User-Agent": "Developer-Collaboration-Platform",
+            }
+          });
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            openBugsCount = searchData.total_count || 0;
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch bugs from GitHub:", err);
+    }
+
     // 5. Aggregate KPIs
     const totalProjectsCount = await prisma.project.count({
       where: { workspaceId },
@@ -118,7 +144,7 @@ export const getWorkspaceDashboardData = async (req, res) => {
       totalProjects: totalProjectsCount,
       activeSprints: activeSprintsCount,
       tasksCompleted: tasksCompletedCount,
-      openBugs: 0, // Not supported in current schema
+      openBugs: openBugsCount, 
       totalSprints: totalSprintsCount,
       totalTasks: totalTasksCount,
     };
