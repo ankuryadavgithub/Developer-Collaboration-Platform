@@ -13,6 +13,7 @@ import projectRoutes from "./routes/project.routes.js";
 import sprintRoutes from "./routes/sprint.routes.js";
 import taskRoutes from "./routes/task.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
+import notificationRoutes from "./routes/notification.routes.js";
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/github", githubRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/organizations", orgRoutes);
 app.use("/api/invitations", invitationRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.use("/api/organizations/:orgId/workspaces", workspaceRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/members",workspaceMemberRoutes);
 

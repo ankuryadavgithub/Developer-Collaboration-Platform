@@ -90,14 +90,37 @@ export const createInvitation = async (req, res) => {
     const validRoles = ["ADMIN", "MANAGER", "MEMBER"];
     const assignedRole = validRoles.includes(role) ? role : "MEMBER";
 
-    const invitation = await prisma.invitation.create({
-      data: {
-        organizationId: orgId,
-        invitedUserId: userId,
-        invitedById: req.user.id,
-        role: assignedRole,
-        expiresAt,
-      },
+        // Use a transaction to ensure both the invitation and notification are created securely
+    await prisma.$transaction(async (tx) => {
+      // 1. Create the invitation
+      const invitation = await tx.invitation.create({
+        data: {
+          organizationId: orgId,
+          invitedUserId: userId,
+          invitedById: req.user.id,
+          role: assignedRole,
+          expiresAt,
+        },
+      });
+
+      // 2. Get the org name for the notification message
+      const org = await tx.organization.findUnique({ where: { id: orgId } });
+
+      // 3. Create the notification!
+      await tx.notification.create({
+        data: {
+          userId: userId,
+          type: "INVITATION", // Using the enum we set up on Day 3
+          title: "New Organization Invitation",
+          message: `You have been invited to join ${org.name} as a ${assignedRole}.`,
+          metadata: {
+            organizationId: orgId,
+            invitationId: invitation.id,
+            inviterId: req.user.id,
+            role: assignedRole
+          }
+        }
+      });
     });
 
     return res
