@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigationLoading } from "../../context/NavigationLoadingContext.jsx";
 import githubIcon from "/src/assets/github.svg";
 import { logout } from "../../services/googleAuthService.js";
+import NotificationDropdown from "./NotificationDropdown.jsx";
 
 // ADDED githubData PROP
 const Navbar = ({ toggleSidebar, githubData }) => {
@@ -89,14 +90,7 @@ const Navbar = ({ toggleSidebar, githubData }) => {
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-3 md:gap-4">
-        <div className="relative">
-          <Bell
-            size={20}
-            className="hidden cursor-pointer text-slate-400 transition-transform hover:scale-110 hover:text-slate-200 md:block"
-          />
-
-          <span className="absolute -right-0.5 -top-0.5 hidden h-2 w-2 rounded-full bg-red-500 ring-2 ring-[#111827] md:block" />
-        </div>
+        <NotificationDropdown />
 
         <MessageCircle
           size={20}
