@@ -52,8 +52,15 @@ const NotificationDropdown = () => {
         setIsOpen(false);
       }
     };
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
     document.addEventListener("mousedown", closeDropdown);
-    return () => document.removeEventListener("mousedown", closeDropdown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", closeDropdown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const handleMarkAsRead = async (id, e) => {
@@ -82,10 +89,16 @@ const NotificationDropdown = () => {
       handleMarkAsRead(notification.id);
     }
     
+    setIsOpen(false);
+
     // Navigate based on metadata
     if (notification.type === "INVITATION") {
-      setIsOpen(false);
       navigate("/invitations");
+    } else if (notification.type === "SYSTEM" && notification.title === "Invitation Accepted") {
+      // If someone accepted, maybe take the inviter to the org members page
+      if (notification.metadata?.organizationId) {
+        navigate(`/organization/${notification.metadata.organizationId}`);
+      }
     }
   };
 
@@ -104,74 +117,94 @@ const NotificationDropdown = () => {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div 
-        className="relative cursor-pointer" 
+      <button 
+        type="button"
+        className="relative flex items-center justify-center p-2 rounded-lg hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-violet-500" 
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="View notifications"
+        aria-expanded={isOpen}
       >
         <Bell
           size={20}
           className={`transition-transform hover:scale-110 ${isOpen ? 'text-violet-400' : 'text-slate-400 hover:text-slate-200'} hidden md:block`}
         />
+        {/* Added mobile visible bell icon since the other is md:block */}
+        <Bell
+          size={20}
+          className={`md:hidden ${isOpen ? 'text-violet-400' : 'text-white'}`}
+        />
         {unreadCount > 0 && (
-          <span className="absolute -right-1 -top-1 hidden h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-[#111827] md:flex">
+          <span className="absolute right-0 top-0 h-4 min-w-[16px] px-1 flex items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-[#111827]">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
-      </div>
+      </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 w-80 overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-xl z-50">
-          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3 bg-slate-800/80">
+        <div 
+          className="absolute right-[-60px] sm:right-0 top-12 w-[320px] overflow-hidden rounded-xl border border-slate-700 bg-slate-800 shadow-2xl z-50 transform origin-top-right transition-all"
+          role="menu"
+          aria-label="Notifications"
+        >
+          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3 bg-slate-800/90 backdrop-blur-sm">
             <h3 className="text-sm font-semibold text-white">Notifications</h3>
             {unreadCount > 0 && (
               <button 
                 onClick={handleMarkAllAsRead}
-                className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
+                className="text-xs font-medium text-violet-400 hover:text-violet-300 focus:outline-none focus:underline flex items-center gap-1 transition-colors"
+                aria-label="Mark all notifications as read"
               >
                 <Check size={14} /> Mark all read
               </button>
             )}
           </div>
 
-          <div className="max-h-[360px] overflow-y-auto">
+          <div className="max-h-[360px] overflow-y-auto overscroll-contain">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center flex flex-col items-center gap-2">
-                <MailOpen size={32} className="text-slate-600" />
-                <p className="text-sm text-slate-400">You're all caught up!</p>
+              <div className="px-4 py-10 text-center flex flex-col items-center gap-3">
+                <div className="w-12 h-12 bg-slate-700/50 rounded-full flex items-center justify-center text-slate-500">
+                  <MailOpen size={24} />
+                </div>
+                <p className="text-sm font-medium text-slate-300">You're all caught up!</p>
+                <p className="text-xs text-slate-500">No new notifications right now.</p>
               </div>
             ) : (
               notifications.map((notif) => (
                 <div 
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
-                  className={`flex items-start gap-3 border-b border-slate-700/50 p-4 transition-colors hover:bg-slate-700/50 cursor-pointer ${notif.isRead ? 'opacity-70' : 'bg-slate-800'}`}
+                  role="menuitem"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif); }}
+                  className={`flex items-start gap-3 border-b border-slate-700/50 p-4 transition-colors hover:bg-slate-700 focus:bg-slate-700 focus:outline-none cursor-pointer ${notif.isRead ? 'opacity-70 bg-slate-800' : 'bg-slate-800/80'}`}
                 >
-                  <div className={`mt-0.5 shrink-0 rounded-full p-1.5 ${notif.isRead ? 'bg-slate-700 text-slate-400' : 'bg-violet-500/20 text-violet-400'}`}>
+                  <div className={`mt-0.5 shrink-0 rounded-full p-2 ${notif.isRead ? 'bg-slate-700 text-slate-400' : 'bg-violet-500/20 text-violet-400 ring-1 ring-violet-500/30'}`}>
                     <CircleAlert size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${notif.isRead ? 'text-slate-300' : 'text-white font-medium'} leading-tight mb-1`}>
+                    <p className={`text-sm ${notif.isRead ? 'text-slate-300' : 'text-slate-100 font-semibold'} leading-tight mb-1`}>
                       {notif.title}
                     </p>
-                    <p className="text-xs text-slate-400 line-clamp-2">
+                    <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                       {notif.message}
                     </p>
-                    <p className="mt-1 text-[10px] text-slate-500">
+                    <p className="mt-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
                       {formatTimeAgo(notif.createdAt)}
                     </p>
                   </div>
                   {!notif.isRead && (
                     <div 
-                      className="shrink-0 w-2 h-2 rounded-full bg-violet-500 mt-2" 
+                      className="shrink-0 w-2.5 h-2.5 rounded-full bg-violet-500 mt-2 shadow-[0_0_8px_rgba(139,92,246,0.5)]" 
                       title="Unread"
+                      aria-label="Unread notification"
                     />
                   )}
                 </div>
               ))
             )}
           </div>
-          <div className="border-t border-slate-700 p-2 bg-slate-800/80 text-center">
-            <span className="text-xs text-slate-400 cursor-pointer hover:text-white transition-colors">View all notifications</span>
+          <div className="border-t border-slate-700 p-3 bg-slate-800/90 text-center hover:bg-slate-700 transition-colors cursor-pointer">
+            <span className="text-xs font-semibold text-slate-300">View all notifications</span>
           </div>
         </div>
       )}

@@ -59,6 +59,12 @@ export const createInvitation = async (req, res) => {
         .status(400)
         .json({ success: false, message: "User ID is required." });
 
+    const invitedUser = await prisma.user.findUnique({ where: { id: userId } });
+    if (!invitedUser)
+      return res
+        .status(404)
+        .json({ success: false, message: "Invited user not found." });
+
     const existingMember = await prisma.organizationMember.findUnique({
       where: { organizationId_userId: { organizationId: orgId, userId } },
     });
@@ -127,9 +133,10 @@ export const createInvitation = async (req, res) => {
       .status(201)
       .json({ success: true, message: "Invitation sent successfully" });
   } catch (error) {
+    console.error("Create invitation error:", error);
     return res
       .status(500)
-      .json({ success: false, message: "Internal server error" });
+      .json({ success: false, message: error.message || "Internal server error" });
   }
 };
 
@@ -194,6 +201,23 @@ export const acceptInvitation = async (req, res) => {
           role: invite.role,
         },
       });
+
+      // Send notification back to the inviter
+      const currentUser = await tx.user.findUnique({ where: { id: req.user.id } });
+      const org = await tx.organization.findUnique({ where: { id: invite.organizationId } });
+
+      await tx.notification.create({
+        data: {
+          userId: invite.invitedById,
+          type: "SYSTEM", 
+          title: "Invitation Accepted",
+          message: `${currentUser.username} has accepted your invitation to join ${org.name}.`,
+          metadata: {
+            organizationId: invite.organizationId,
+            userId: req.user.id
+          }
+        }
+      });
     });
 
     return res
@@ -228,9 +252,27 @@ export const rejectInvitation = async (req, res) => {
         .json({ success: false, message: "Invalid invitation" });
     }
 
-    await prisma.invitation.update({
-      where: { id: invitationId },
-      data: { status: "REJECTED" },
+    await prisma.$transaction(async (tx) => {
+      await tx.invitation.update({
+        where: { id: invitationId },
+        data: { status: "REJECTED" },
+      });
+
+      const currentUser = await tx.user.findUnique({ where: { id: req.user.id } });
+      const org = await tx.organization.findUnique({ where: { id: invite.organizationId } });
+
+      await tx.notification.create({
+        data: {
+          userId: invite.invitedById,
+          type: "SYSTEM",
+          title: "Invitation Declined",
+          message: `${currentUser.username} has declined your invitation to join ${org.name}.`,
+          metadata: {
+            organizationId: invite.organizationId,
+            userId: req.user.id
+          }
+        }
+      });
     });
 
     return res

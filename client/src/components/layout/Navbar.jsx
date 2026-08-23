@@ -66,6 +66,12 @@ const Navbar = ({ toggleSidebar, githubData }) => {
         
         <NotificationDropdown />
 
+        <MessageCircle
+          size={20}
+          className="hidden cursor-pointer text-slate-400 transition-transform hover:scale-110 hover:text-slate-200 md:block"
+          onClick={() => alert("Coming Soon!")}
+        />
+
         {!githubData && (
           <div onClick={() => window.location.href = "http://localhost:5000/api/auth/github?action=connect"} className="flex h-5 w-5 cursor-pointer items-center justify-center font-medium transition-transform duration-300 hover:scale-110" title="Connect your GitHub account">
             <img src={githubIcon} alt="GitHub" className="invert opacity-70 transition-opacity hover:opacity-100" />
