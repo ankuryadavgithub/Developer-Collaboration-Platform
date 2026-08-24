@@ -57,8 +57,12 @@ function Sidebar({ isOpen, setIsOpen }) {
           )}
           {workspaceId && (
             <div className="flex flex-col flex-1 overflow-y-auto px-4 gap-1 mt-2">
-              <div 
-                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/dashboard`)}
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/dashboard`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 hover:bg-[#1c1f2e] hover:text-white rounded-lg font-medium cursor-pointer transition-colors"
               >
                 <HomeIcon size={18} className="text-slate-300 shrink-0" />
@@ -69,7 +73,11 @@ function Sidebar({ isOpen, setIsOpen }) {
                 </span>
               </div>
               <div
-                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/projects`)}
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/projects`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 hover:bg-[#1c1f2e] hover:text-white rounded-lg cursor-pointer transition-colors"
               >
                 <Folder size={18} className="text-slate-300 shrink-0" />
@@ -79,8 +87,12 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Projects
                 </span>
               </div>
-              <div 
-                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/tasks`)}
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/tasks`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
                 <CircleCheck size={18} className="text-slate-300 shrink-0" />
@@ -90,7 +102,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Issues / Tasks
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <GitPullRequestArrow
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -101,7 +116,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Pull Requests
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <GitCommitHorizontalIcon
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -112,18 +130,28 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Commits
                 </span>
               </div>
-              <div 
-                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/sprints`)}
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/sprints`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
-                <CircleArrowDown size={18} className="text-slate-300 shrink-0" />
+                <CircleArrowDown
+                  size={18}
+                  className="text-slate-300 shrink-0"
+                />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
                 >
                   Sprints
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <GitBranchMinusIcon
                   size={18}
                   className="text-slate-300 shrink-0"
@@ -134,7 +162,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                   CI/CD
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <BookOpenText size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -142,7 +173,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Wiki
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <MessageCircle size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -150,7 +184,10 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Chat
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() => alert("Coming Soon!")}
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <Calendar size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -158,7 +195,14 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Calender
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/members`,
+                  )
+                }
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <UserRound size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
@@ -166,7 +210,14 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Team
                 </span>
               </div>
-              <div onClick={() => alert("Coming Soon!")} className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors">
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/settings`,
+                  )
+                }
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
                 <Settings size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}

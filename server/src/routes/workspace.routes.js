@@ -13,7 +13,15 @@ import {
   getWorkspaces,
   getWorkspaceDetails,
   archiveWorkspace,
+  updateWorkspace,
 } from "../controllers/workspace.controller.js";
+import {
+  getWorkspaceMembers,
+  getAvailableOrgMembers,
+  addWorkspaceMember,
+  updateWorkspaceMemberRole,
+  removeWorkspaceMember,
+} from "../controllers/workspaceMember.controller.js";
 
 // We use mergeParams: true because this router will be nested under /api/organizations/:orgId
 const router = express.Router({ mergeParams: true });
@@ -34,6 +42,49 @@ router.patch(
   requireAuth,
   requireWorkspaceAdmin,
   archiveWorkspace,
+);
+
+router.patch(
+  "/:workspaceId",
+  requireAuth,
+  requireWorkspaceAdmin,
+  updateWorkspace,
+);
+
+// Workspace Members Operations
+router.get(
+  "/:workspaceId/members",
+  requireAuth,
+  requireWorkspaceMember,
+  getWorkspaceMembers
+);
+
+router.get(
+  "/:workspaceId/members/available",
+  requireAuth,
+  requireWorkspaceMember,
+  getAvailableOrgMembers
+);
+
+router.post(
+  "/:workspaceId/members",
+  requireAuth,
+  requireWorkspaceAdmin,
+  addWorkspaceMember
+);
+
+router.patch(
+  "/:workspaceId/members/:userId",
+  requireAuth,
+  requireWorkspaceAdmin,
+  updateWorkspaceMemberRole
+);
+
+router.delete(
+  "/:workspaceId/members/:userId",
+  requireAuth,
+  requireWorkspaceAdmin,
+  removeWorkspaceMember
 );
 
 export default router;

@@ -19,6 +19,8 @@ import Workspaces from "./pages/Workspaces";
 import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
 import WorkspaceDetails from "./pages/WorkspaceDetails";
 import Invitations from "./pages/Invitations";
+import WorkspaceSettings from "./pages/WorkspaceSettings";
+import WorkspaceMembers from "./pages/WorkspaceMembers";
 import PageLoader from "./components/common/PageLoader";
 import {
   NavigationLoadingProvider,
@@ -177,6 +179,24 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Invitations />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/settings"
+          element={
+            <ProtectedRoute>
+              <WorkspaceSettings />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/members"
+          element={
+            <ProtectedRoute>
+              <WorkspaceMembers />
             </ProtectedRoute>
           }
         />
