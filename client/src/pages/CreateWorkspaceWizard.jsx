@@ -88,7 +88,7 @@ const CreateWorkspaceWizard = () => {
       if (res.data.success) {
         // Redirect them to the new Workspace Details page (we will build this next)
         navigate(
-          `/organizations/${currentOrg.id}/workspaces/${res.data.data.id}`,
+          `/organizations/${currentOrg.id}/workspaces/${res.data.data.id}/dashboard`,
         );
       }
     } catch (error) {

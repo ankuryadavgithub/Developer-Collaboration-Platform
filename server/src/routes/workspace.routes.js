@@ -13,7 +13,11 @@ import {
   getWorkspaces,
   getWorkspaceDetails,
   archiveWorkspace,
+  unarchiveWorkspace,
   updateWorkspace,
+  deleteWorkspace,
+  updateRepository,
+  removeRepository,
 } from "../controllers/workspace.controller.js";
 import {
   getWorkspaceMembers,
@@ -42,6 +46,13 @@ router.patch(
   requireAuth,
   requireWorkspaceAdmin,
   archiveWorkspace,
+);
+
+router.patch(
+  "/:workspaceId/unarchive",
+  requireAuth,
+  requireWorkspaceAdmin,
+  unarchiveWorkspace,
 );
 
 router.patch(
@@ -85,6 +96,28 @@ router.delete(
   requireAuth,
   requireWorkspaceAdmin,
   removeWorkspaceMember
+);
+
+// Day 2: Danger Zone & Repository Routes
+router.delete(
+  "/:workspaceId",
+  requireAuth,
+  requireWorkspaceAdmin,
+  deleteWorkspace
+);
+
+router.post(
+  "/:workspaceId/repository",
+  requireAuth,
+  requireWorkspaceAdmin,
+  updateRepository
+);
+
+router.delete(
+  "/:workspaceId/repository",
+  requireAuth,
+  requireWorkspaceAdmin,
+  removeRepository
 );
 
 export default router;

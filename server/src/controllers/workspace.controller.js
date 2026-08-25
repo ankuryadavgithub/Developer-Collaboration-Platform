@@ -242,6 +242,29 @@ export const archiveWorkspace = async (req, res) => {
   }
 };
 
+// @desc    Unarchive Workspace
+// @route   PATCH /api/organizations/:orgId/workspaces/:workspaceId/unarchive
+export const unarchiveWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    const restored = await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { status: "ACTIVE" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Workspace restored successfully",
+      data: restored,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to restore workspace" });
+  }
+};
+
 // update workspace name and description
 export const updateWorkspace = async (req, res) => {
   try {
@@ -315,5 +338,96 @@ export const updateWorkspace = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to update workspace." });
+  }
+};
+
+// @desc    Soft delete (Archive) Workspace
+// @route   DELETE /api/organizations/:orgId/workspaces/:workspaceId
+export const deleteWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { status: "ARCHIVED" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Workspace archived successfully",
+    });
+  } catch (error) {
+    console.error("Delete workspace error:", error);
+    return res.status(500).json({ success: false, message: "Failed to archive workspace" });
+  }
+};
+
+// @desc    Update or Connect Repository
+// @route   POST /api/organizations/:orgId/workspaces/:workspaceId/repository
+export const updateRepository = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+    const { githubUrl } = req.body;
+
+    if (!githubUrl || !githubUrl.includes("github.com/")) {
+      return res.status(400).json({ success: false, message: "Valid GitHub repository URL is required." });
+    }
+
+    // Extract owner and repo name from URL (e.g., https://github.com/owner/repo)
+    const urlParts = githubUrl.split("github.com/")[1].split("/");
+    const owner = urlParts[0];
+    const name = urlParts[1]?.replace(".git", "");
+
+    if (!owner || !name) {
+      return res.status(400).json({ success: false, message: "Invalid GitHub URL format." });
+    }
+
+    const repoData = {
+      workspaceId,
+      githubRepositoryId: `${owner}-${name}`, // Mock ID for manually connected repos
+      name: name,
+      fullName: `${owner}/${name}`,
+      owner: owner,
+      description: "Manually connected repository",
+      visibility: "Unknown",
+      defaultBranch: "main",
+      htmlUrl: githubUrl,
+    };
+
+    const repository = await prisma.repository.upsert({
+      where: { workspaceId: workspaceId },
+      update: repoData,
+      create: repoData,
+    });
+
+    return res.status(200).json({ success: true, data: repository, message: "Repository connected successfully." });
+  } catch (error) {
+    console.error("Update repository error:", error);
+    return res.status(500).json({ success: false, message: "Failed to connect repository." });
+  }
+};
+
+// @desc    Remove Repository Connection
+// @route   DELETE /api/organizations/:orgId/workspaces/:workspaceId/repository
+export const removeRepository = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    const existingRepo = await prisma.repository.findUnique({
+      where: { workspaceId },
+    });
+
+    if (!existingRepo) {
+      return res.status(400).json({ success: false, message: "No repository connected to this workspace." });
+    }
+
+    await prisma.repository.delete({
+      where: { workspaceId },
+    });
+
+    return res.status(200).json({ success: true, message: "Repository disconnected successfully." });
+  } catch (error) {
+    console.error("Remove repository error:", error);
+    return res.status(500).json({ success: false, message: "Failed to disconnect repository." });
   }
 };
