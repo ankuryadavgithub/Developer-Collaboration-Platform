@@ -95,7 +95,8 @@ const Projects = () => {
               {projects.map((project) => (
                 <div
                   key={project.id}
-                  className="bg-[#1c1f2e] p-6 rounded-xl border border-[#ffffff]/10 hover:border-violet-500/50 transition-colors group flex flex-col h-full"
+                  onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/projects/${project.id}`)}
+                  className="bg-[#1c1f2e] p-6 rounded-xl border border-[#ffffff]/10 hover:border-violet-500/50 transition-colors group flex flex-col h-full cursor-pointer"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="h-12 w-12 bg-violet-500/20 text-violet-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shrink-0">

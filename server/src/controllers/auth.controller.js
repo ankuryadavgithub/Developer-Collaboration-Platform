@@ -208,6 +208,7 @@ export const loginUser = async (req, res) => {
         email: user.email,
         jobTitle: user.jobTitle,
         platformRole: user.platformRole,
+        avatar: user.avatar
       },
     });
   } catch (error) {
@@ -292,6 +293,7 @@ export const googleLogin = async (req, res) => {
       },
     });
   } catch (error) {
+    console.error("GOOGLE LOGIN CRASH:", error);
     return res
       .status(500)
       .json({ success: false, message: "Google Login Failed" });
@@ -455,7 +457,7 @@ export const githubCallback = async (req, res) => {
       const currentToken = req.cookies.token || req.cookies.accessToken;
       if (currentToken) {
         try {
-          const decoded = jwt.verify(currentToken, process.env.JWT_SECRET);
+          const decoded = jwt.verify(currentToken, process.env.ACCESS_TOKEN_SECRET);
           // Link the GitHub account in DB, but DO NOT change the Google avatar!
           await prisma.user.update({
             where: { id: decoded.id },
@@ -464,7 +466,9 @@ export const githubCallback = async (req, res) => {
               githubAccessToken: githubToken,
             },
           });
-        } catch (err) {}
+        } catch (err) {
+          console.error("GitHub Connect Error:", err);
+        }
       }
       return res.redirect(`${process.env.CLIENT_URL}/dashboard`);
     }

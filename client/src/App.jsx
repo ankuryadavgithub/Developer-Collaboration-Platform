@@ -27,8 +27,10 @@ import {
 import "./index.css";
 import GithubCallback from "./pages/githubCallback";
 import Projects from "./pages/Projects";
+import ProjectDetails from "./pages/ProjectDetails";
 import Sprints from "./pages/Sprints";
 import TasksKanban from "./pages/TasksKanban";
+import UserProfile from "./pages/UserProfile";
 
 function AppRoutes() {
   const location = useLocation();
@@ -90,6 +92,15 @@ function AppRoutes() {
           }
         />
 
+        <Route 
+          path="/profile" 
+          element={
+            <ProtectedRoute>
+              <UserProfile />
+            </ProtectedRoute>          
+          } 
+        />
+
         <Route
           path="/organizations/:orgId/workspaces/:workspaceId/dashboard"
           element={
@@ -104,6 +115,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Projects />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/projects/:projectId"
+          element={
+            <ProtectedRoute>
+              <ProjectDetails />
             </ProtectedRoute>
           }
         />

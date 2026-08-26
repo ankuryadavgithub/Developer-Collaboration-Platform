@@ -116,7 +116,11 @@ export const getTasks = async (req, res) => {
 
     const where = { workspaceId };
     if (projectId) where.projectId = parseInt(projectId);
-    if (sprintId) where.sprintId = parseInt(sprintId);
+    if (sprintId === "null") {
+      where.sprintId = null;
+    }else if (sprintId) {
+      where.sprintId = parseInt(sprintId);
+    }
     if (status) where.status = status;
     if (assigneeId) where.assigneeId = parseInt(assigneeId);
 

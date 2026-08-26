@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ListTodo, Plus, GripVertical, AlertCircle, CheckCircle2, User, Calendar, Star } from "lucide-react";
+import { Folder, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import Navbar from "../components/layout/Navbar";
 
@@ -12,113 +12,57 @@ const COLUMNS = [
   { id: "DONE", title: "Done", color: "border-green-500" },
 ];
 
-const TasksKanban = () => {
-  const { orgId, workspaceId } = useParams();
+const ProjectDetails = () => {
+  const { orgId, workspaceId, projectId } = useParams();
   const navigate = useNavigate();
+  const [project, setProject] = useState(null);
   const [tasks, setTasks] = useState([]);
-  const [projects, setProjects] = useState([]);
-  const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Create task modal
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newTask, setNewTask] = useState({ title: "", description: "", type: "FEATURE", priority: "MEDIUM", projectId: "" });
-
-  // Edit task modal
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedTask, setSelectedTask] = useState(null);
+  const [newTask, setNewTask] = useState({ title: "", description: "", type: "FEATURE", priority: "MEDIUM" });
 
   useEffect(() => {
-    fetchTasks();
-    fetchProjects();
-    fetchMembers();
-  }, [workspaceId]);
+    fetchProjectAndTasks();
+  }, [projectId]);
 
-  const fetchTasks = async () => {
+  const fetchProjectAndTasks = async () => {
     try {
-      const res = await axios.get(
-        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/tasks`,
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        setTasks(res.data.data);
+      setLoading(true);
+      const [projRes, tasksRes] = await Promise.all([
+        axios.get(`http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/projects/${projectId}`, { withCredentials: true }),
+        axios.get(`http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/tasks?projectId=${projectId}`, { withCredentials: true })
+      ]);
+      
+      if (projRes.data.success) {
+        setProject(projRes.data.data);
+      }
+      if (tasksRes.data.success) {
+        setTasks(tasksRes.data.data);
       }
     } catch (error) {
-      console.error("Failed to fetch tasks");
+      console.error("Failed to fetch project details");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchProjects = async () => {
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/projects`,
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        setProjects(res.data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch projects");
-    }
-  };
-
-  const fetchMembers = async () => {
-    try {
-      const res = await axios.get(
-        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/members`,
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        setMembers(res.data.data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch members");
-    }
-  };
-
   const handleCreateTask = async (e) => {
     e.preventDefault();
-    if (!newTask.projectId) {
-      alert("Please select a project first! If you don't have one, go to the Projects tab to create one.");
-      return;
-    }
     try {
       await axios.post(
         `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/tasks`,
-        newTask,
+        { ...newTask, projectId },
         { withCredentials: true }
       );
       setShowCreateModal(false);
-      setNewTask({ title: "", description: "", type: "FEATURE", priority: "MEDIUM", projectId: "" });
-      fetchTasks();
+      setNewTask({ title: "", description: "", type: "FEATURE", priority: "MEDIUM" });
+      fetchProjectAndTasks();
     } catch (err) {
       console.error("Failed to create task");
       alert(err.response?.data?.message || "Failed to create task.");
-    }
-  };
-
-  const handleUpdateTask = async (e) => {
-    e.preventDefault();
-    try {
-      const updateData = {
-        assigneeId: selectedTask.assigneeId || null,
-        storyPoints: selectedTask.storyPoints ? parseInt(selectedTask.storyPoints) : 0,
-        dueDate: selectedTask.dueDate || null,
-      };
-
-      await axios.patch(
-        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/tasks/${selectedTask.id}`,
-        updateData,
-        { withCredentials: true }
-      );
-      setShowEditModal(false);
-      fetchTasks();
-    } catch (err) {
-      console.error("Failed to update task");
-      alert(err.response?.data?.message || "Failed to update task.");
     }
   };
 
@@ -141,21 +85,12 @@ const TasksKanban = () => {
       );
     } catch (err) {
       console.error("Failed to update task status");
-      fetchTasks(); // Revert on failure
+      fetchProjectAndTasks(); // Revert on failure
     }
   };
 
   const handleDragOver = (e) => {
     e.preventDefault();
-  };
-
-  const openEditModal = (task) => {
-    setSelectedTask({
-      ...task,
-      assigneeId: task.assignee?.id || "",
-      dueDate: task.dueDate ? task.dueDate.split('T')[0] : "",
-    });
-    setShowEditModal(true);
   };
 
   return (
@@ -168,20 +103,14 @@ const TasksKanban = () => {
           <div className="flex items-center justify-between mb-6 shrink-0">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3 text-white">
-                <ListTodo size={32} className="text-violet-500" /> Kanban Board
+                <Folder size={32} className="text-violet-500" /> {project ? project.name : "Loading Project..."}
               </h1>
               <p className="text-slate-400 mt-1">
-                Drag and drop tasks, or click a task to assign and edit details.
+                {project?.description || "Manage project tasks"}
               </p>
             </div>
             <button
-              onClick={() => {
-                if (projects.length === 0) {
-                  alert("You need to create a Project first before adding tasks! Go to the 'Projects' tab.");
-                  return;
-                }
-                setShowCreateModal(true);
-              }}
+              onClick={() => setShowCreateModal(true)}
               className="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
             >
               <Plus size={20} /> Add Task
@@ -189,7 +118,7 @@ const TasksKanban = () => {
           </div>
 
           {loading ? (
-            <div className="text-white text-center py-10">Loading board...</div>
+            <div className="text-white text-center py-10">Loading project...</div>
           ) : (
             <div className="flex gap-6 overflow-x-auto pb-4 flex-1">
               {COLUMNS.map(column => {
@@ -214,27 +143,19 @@ const TasksKanban = () => {
                           key={task.id}
                           draggable
                           onDragStart={(e) => handleDragStart(e, task.id)}
-                          onClick={() => openEditModal(task)}
-                          className="bg-[#242938] p-4 rounded-lg border border-slate-700 hover:border-violet-500/50 cursor-grab active:cursor-grabbing shadow-sm transition-colors"
+                          className="bg-[#242938] p-4 rounded-lg border border-slate-700 hover:border-violet-500/50 cursor-grab active:cursor-grabbing shadow-sm"
                         >
                           <div className="flex justify-between items-start mb-2">
                             <span className="text-xs font-semibold text-slate-400">
                               {task.key || `TASK-${task.id}`}
                             </span>
-                            <div className="flex items-center gap-2">
-                              {task.storyPoints > 0 && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-violet-500/20 text-violet-400 flex items-center gap-1">
-                                  <Star size={10} /> {task.storyPoints}
-                                </span>
-                              )}
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider ${
-                                task.priority === "HIGH" ? "bg-red-500/20 text-red-400" :
-                                task.priority === "LOW" ? "bg-blue-500/20 text-blue-400" :
-                                "bg-yellow-500/20 text-yellow-400"
-                              }`}>
-                                {task.priority}
-                              </span>
-                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider ${
+                              task.priority === "HIGH" ? "bg-red-500/20 text-red-400" :
+                              task.priority === "LOW" ? "bg-blue-500/20 text-blue-400" :
+                              "bg-yellow-500/20 text-yellow-400"
+                            }`}>
+                              {task.priority}
+                            </span>
                           </div>
                           
                           <h4 className="text-sm font-semibold text-white mb-2 leading-tight">
@@ -254,12 +175,9 @@ const TasksKanban = () => {
                             </div>
                             
                             {task.assignee && (
-                              <img 
-                                src={task.assignee.avatar || `https://ui-avatars.com/api/?name=${task.assignee.username}&background=6d28d9&color=fff`} 
-                                alt={task.assignee.username}
-                                title={task.assignee.username}
-                                className="w-6 h-6 rounded-full border border-slate-800 object-cover"
-                              />
+                              <div className="w-6 h-6 rounded-full bg-violet-600 flex items-center justify-center text-[10px] font-bold text-white border border-slate-800" title={task.assignee.username}>
+                                {task.assignee.username.charAt(0).toUpperCase()}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -282,22 +200,8 @@ const TasksKanban = () => {
         {showCreateModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
             <div className="w-full max-w-md bg-[#1c1f2e] rounded-2xl shadow-xl border border-slate-700 p-6 relative">
-              <h2 className="text-2xl font-bold text-white mb-6">Create New Task</h2>
+              <h2 className="text-2xl font-bold text-white mb-6">Create Task in {project?.name}</h2>
               <form onSubmit={handleCreateTask}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Project</label>
-                  <select
-                    required
-                    value={newTask.projectId || ""}
-                    onChange={(e) => setNewTask({...newTask, projectId: e.target.value})}
-                    className="w-full bg-[#0f111a] border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-violet-500"
-                  >
-                    <option value="" disabled>Select a project...</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
                   <input
@@ -365,81 +269,9 @@ const TasksKanban = () => {
             </div>
           </div>
         )}
-
-        {/* Edit Task Modal */}
-        {showEditModal && selectedTask && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="w-full max-w-md bg-[#1c1f2e] rounded-2xl shadow-xl border border-slate-700 p-6 relative">
-              <h2 className="text-2xl font-bold text-white mb-2">Edit Task</h2>
-              <p className="text-sm text-slate-400 mb-6">{selectedTask.title}</p>
-              
-              <form onSubmit={handleUpdateTask}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                    <User size={16} /> Assignee
-                  </label>
-                  <select
-                    value={selectedTask.assigneeId || ""}
-                    onChange={(e) => setSelectedTask({...selectedTask, assigneeId: e.target.value})}
-                    className="w-full bg-[#0f111a] border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-violet-500"
-                  >
-                    <option value="">Unassigned</option>
-                    {members.map(m => (
-                      <option key={m.user.id} value={m.user.id}>
-                        {m.user.username} {m.role === "ADMIN" ? "(Admin)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                      <Star size={16} /> Story Points
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={selectedTask.storyPoints || 0}
-                      onChange={(e) => setSelectedTask({...selectedTask, storyPoints: e.target.value})}
-                      className="w-full bg-[#0f111a] border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-                      <Calendar size={16} /> Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={selectedTask.dueDate || ""}
-                      onChange={(e) => setSelectedTask({...selectedTask, dueDate: e.target.value})}
-                      className="w-full bg-[#0f111a] border border-slate-700 rounded-lg p-3 text-white outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 rounded-lg text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );
 };
 
-export default TasksKanban;
+export default ProjectDetails;

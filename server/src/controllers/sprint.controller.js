@@ -88,74 +88,70 @@ export const getSprints = async (req, res) => {
   }
 };
 
-// @desc    Start a sprint (Enforces 1 Active Sprint Rule)
-// @route   POST /api/organizations/:orgId/workspaces/:workspaceId/sprints/:sprintId/start
-export const startSprint = async (req, res) => {
+// @desc    Update a sprint (status, details)
+// @route   PATCH /api/organizations/:orgId/workspaces/:workspaceId/sprints/:sprintId
+export const updateSprint = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const sprintId = parseInt(req.params.sprintId);
+    const { status, name, goal, startDate, endDate } = req.body;
 
-    // CRITICAL REQUIREMENT: Only one active sprint per workspace
-    const activeSprint = await prisma.sprint.findFirst({
-      where: { workspaceId, status: "ACTIVE" },
+    const existingSprint = await prisma.sprint.findUnique({
+      where: { id: sprintId, workspaceId },
+      include: { tasks: true }
     });
 
-    if (activeSprint) {
-      return res
-        .status(409)
-        .json({
-          success: false,
-          message: `Conflict: Cannot start sprint. "${activeSprint.name}" is currently active.`,
-        });
+    if (!existingSprint) {
+      return res.status(404).json({ success: false, message: "Sprint not found." });
     }
 
-    const sprint = await prisma.sprint.update({
+    // 1. Date Validation (Start date <= End date)
+    const start = startDate ? new Date(startDate) : existingSprint.startDate;
+    const end = endDate ? new Date(endDate) : existingSprint.endDate;
+    if (start && end && start > end) {
+      return res.status(400).json({ success: false, message: "Start date must be before or equal to End date." });
+    }
+
+    // 2. Status Transition Validation
+    if (status && status !== existingSprint.status) {
+      if (status === "ACTIVE") {
+        if (existingSprint.status !== "PLANNED") {
+          return res.status(400).json({ success: false, message: "Only PLANNED sprints can be started." });
+        }
+        // Enforce 1 Active Sprint rule
+        const activeSprint = await prisma.sprint.findFirst({
+          where: { workspaceId, status: "ACTIVE" },
+        });
+        if (activeSprint) {
+          return res.status(409).json({ success: false, message: `Conflict: Cannot start sprint. "${activeSprint.name}" is currently active.` });
+        }
+      } else if (status === "COMPLETED") {
+        if (existingSprint.status !== "ACTIVE") {
+          return res.status(400).json({ success: false, message: "Only ACTIVE sprints can be completed." });
+        }
+      }
+    }
+
+    const updatedSprint = await prisma.sprint.update({
       where: { id: sprintId, workspaceId },
-      data: { status: "ACTIVE" },
+      data: {
+        status: status || existingSprint.status,
+        name: name || existingSprint.name,
+        goal: goal || existingSprint.goal,
+        startDate: start,
+        endDate: end
+      },
+      include: {
+        tasks: {
+          include: {
+             assignee: { select: { id: true, username: true, avatar: true } },
+          }
+        }
+      }
     });
 
-    await logActivity(
-      workspaceId,
-      req.user.id,
-      "SPRINT_STARTED",
-      "SPRINT",
-      sprint.id,
-      `Started sprint "${sprint.name}"`,
-    );
-
-    return res.status(200).json({ success: true, data: sprint });
+    return res.status(200).json({ success: true, data: updatedSprint });
   } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to start sprint." });
-  }
-};
-
-// @desc    Complete a sprint
-// @route   POST /api/organizations/:orgId/workspaces/:workspaceId/sprints/:sprintId/complete
-export const completeSprint = async (req, res) => {
-  try {
-    const workspaceId = req.workspace.id;
-    const sprintId = parseInt(req.params.sprintId);
-
-    const sprint = await prisma.sprint.update({
-      where: { id: sprintId, workspaceId },
-      data: { status: "COMPLETED" },
-    });
-
-    await logActivity(
-      workspaceId,
-      req.user.id,
-      "SPRINT_COMPLETED",
-      "SPRINT",
-      sprint.id,
-      `Completed sprint "${sprint.name}"`,
-    );
-
-    return res.status(200).json({ success: true, data: sprint });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to complete sprint." });
+    return res.status(500).json({ success: false, message: "Failed to update sprint." });
   }
 };

@@ -14,6 +14,7 @@ import sprintRoutes from "./routes/sprint.routes.js";
 import taskRoutes from "./routes/task.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
@@ -50,6 +51,9 @@ app.use("/api/organizations/:orgId/workspaces/:workspaceId/dashboard", dashboard
 // We also mount the github routes here so they have access to the workspace context!
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/github", githubRoutes);
 app.use("/api/github", githubRoutes); // Keep global for /repositories
+
+app.use("/api/users", userRoutes);
+
 // default route
 app.get("/",(req,res) => {
   res.json({

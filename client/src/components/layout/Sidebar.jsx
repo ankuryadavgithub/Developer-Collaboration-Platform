@@ -190,7 +190,7 @@ function Sidebar({ isOpen, setIsOpen }) {
               </span>
             </div>
             <div
-              onClick={() => alert("Coming Soon!")}
+              onClick={() => navigate("/profile")}
               className={`p-2 flex items-center rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer ${isCollapsed ? "justify-center" : "gap-2"}`}
             >
               <CircleUserRound size={20} className="shrink-0" />
