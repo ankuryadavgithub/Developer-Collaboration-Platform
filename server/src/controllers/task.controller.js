@@ -64,6 +64,59 @@ export const createTask = async (req, res) => {
           .json({ success: false, message: "Invalid sprint specified." });
     }
 
+    let githubIssueId = null;
+    let githubItemId = null;
+    let githubIssueNum = null;
+
+    // BUG 3 FIX: Use the Workspace Owner's token so any team member can sync!
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: { owner: true }
+    });
+    
+    if (workspace?.owner?.githubAccessToken && project.githubProjectId) {
+      const syncToken = workspace.owner.githubAccessToken;
+      const repository = await prisma.repository.findUnique({
+        where: { workspaceId },
+      });
+      if (repository) {
+        try {
+          const { createGithubIssue, addIssueToGithubProject, assignGithubIssue } = await import("../services/github.service.js");
+          const issue = await createGithubIssue(
+            syncToken,
+            repository.owner,
+            repository.name,
+            title,
+            description || ""
+          );
+          githubIssueId = issue.issueId;
+          githubIssueNum = issue.issueNum;
+          
+          githubItemId = await addIssueToGithubProject(
+            syncToken,
+            project.githubProjectId,
+            githubIssueId
+          );
+
+          // Assigning the issue!
+          if (assigneeId) {
+            const assigneeUser = await prisma.user.findUnique({ where: { id: parseInt(assigneeId) } });
+            if (assigneeUser && assigneeUser.githubUsername) {
+              await assignGithubIssue(
+                syncToken,
+                repository.owner,
+                repository.name,
+                githubIssueNum,
+                [assigneeUser.githubUsername]
+              );
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync task with GitHub:", err);
+        }
+      }
+    }
+
     const task = await prisma.task.create({
       data: {
         workspaceId,
@@ -76,6 +129,9 @@ export const createTask = async (req, res) => {
         dueDate: dueDate ? new Date(dueDate) : null,
         storyPoints: storyPoints ? parseInt(storyPoints) : 0,
         createdById: req.user.id,
+        githubIssueId,
+        githubItemId,
+        githubIssueNum,
       },
     });
 
@@ -158,7 +214,7 @@ export const updateTask = async (req, res) => {
         .status(404)
         .json({ success: false, message: "Task not found." });
 
-    if (assigneeId && assigneeId !== existing.assigneeId) {
+    if (assigneeId && assigneeId !== "null" && assigneeId !== existing.assigneeId) {
       const member = await prisma.workspaceMember.findUnique({
         where: {
           workspaceId_userId: { workspaceId, userId: parseInt(assigneeId) },
@@ -173,7 +229,7 @@ export const updateTask = async (req, res) => {
           });
     }
 
-    if (sprintId && sprintId !== existing.sprintId) {
+    if (sprintId && sprintId !== "null" && sprintId !== existing.sprintId) {
       const sprint = await prisma.sprint.findUnique({
         where: { id: parseInt(sprintId) },
       });
@@ -188,16 +244,16 @@ export const updateTask = async (req, res) => {
       data: {
         status: status || existing.status,
         priority: priority || existing.priority,
-        // Allow removing assignee by explicitly passing null
+        // Allow removing assignee by explicitly passing null or "null"
         assigneeId:
           assigneeId !== undefined
-            ? assigneeId
+            ? assigneeId && assigneeId !== "null"
               ? parseInt(assigneeId)
               : null
             : existing.assigneeId,
         sprintId:
           sprintId !== undefined
-            ? sprintId
+            ? sprintId && sprintId !== "null"
               ? parseInt(sprintId)
               : null
             : existing.sprintId,
@@ -207,6 +263,55 @@ export const updateTask = async (req, res) => {
             : existing.storyPoints,
       },
     });
+
+    // GitHub Sync Phase!
+    if (existing.githubIssueNum) {
+      const workspace = await prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        include: { owner: true }
+      });
+      const repository = await prisma.repository.findUnique({ where: { workspaceId } });
+      
+      if (workspace?.owner?.githubAccessToken && repository) {
+        const syncToken = workspace.owner.githubAccessToken;
+        try {
+          const { assignGithubIssue, updateGithubIssueState } = await import("../services/github.service.js");
+          
+          // Bug 2 Fix: Sync Assignee
+          if (assigneeId !== undefined) {
+            let assigneesList = [];
+            if (assigneeId && assigneeId !== "null") {
+              const assigneeUser = await prisma.user.findUnique({ where: { id: parseInt(assigneeId) } });
+              if (assigneeUser && assigneeUser.githubUsername) {
+                assigneesList = [assigneeUser.githubUsername];
+              }
+            }
+            
+            await assignGithubIssue(
+              syncToken,
+              repository.owner,
+              repository.name,
+              existing.githubIssueNum,
+              assigneesList
+            );
+          }
+
+          // Bug 3 Fix: Sync Status
+          if (status && status !== existing.status) {
+            const newState = status === "DONE" ? "closed" : "open";
+            await updateGithubIssueState(
+              syncToken,
+              repository.owner,
+              repository.name,
+              existing.githubIssueNum,
+              newState
+            );
+          }
+        } catch (err) {
+          console.error("Failed to sync task updates to GitHub:", err);
+        }
+      }
+    }
 
     if (status && status !== existing.status) {
       if (status === "DONE") {

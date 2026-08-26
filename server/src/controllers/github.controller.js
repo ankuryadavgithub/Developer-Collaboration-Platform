@@ -208,3 +208,45 @@ export const getAccessibleRepositories = async (req, res) => {
     return res.status(500).json({ success: false, message: "Could not fetch GitHub repositories." });
   }
 };
+
+// @desc    Handle incoming Webhooks from GitHub (Phase 3: Two-Way Sync)
+// @route   POST /api/github/webhook
+export const handleGithubWebhook = async (req, res) => {
+  try {
+    const event = req.headers["x-github-event"];
+    const payload = req.body;
+
+    console.log(`[GitHub Webhook] Received event: ${event}`);
+
+    // Immediately respond to GitHub to prevent timeouts
+    res.status(200).json({ received: true });
+
+    if (event === "issues") {
+      const { action, issue } = payload;
+      
+      // If an issue is closed on GitHub, mark our task as DONE
+      if (action === "closed") {
+        await prisma.task.updateMany({
+          where: { githubIssueId: issue.node_id },
+          data: { status: "DONE" },
+        });
+        console.log(`[GitHub Webhook] Task linked to issue ${issue.node_id} marked as DONE.`);
+      }
+      // If an issue is reopened on GitHub, mark our task as IN_PROGRESS or TODO
+      else if (action === "reopened") {
+        await prisma.task.updateMany({
+          where: { githubIssueId: issue.node_id },
+          data: { status: "IN_PROGRESS" },
+        });
+        console.log(`[GitHub Webhook] Task linked to issue ${issue.node_id} marked as IN_PROGRESS.`);
+      }
+    } else if (event === "projects_v2_item") {
+      // TODO: Advanced GraphQL mapping required to detect exact column moves (TODO -> IN_PROGRESS, etc.)
+      // The payload contains changes.field_value which maps to generic Option IDs.
+      const { action, projects_v2_item } = payload;
+      console.log(`[GitHub Webhook] Project V2 Item ${projects_v2_item.node_id} updated. action: ${action}`);
+    }
+  } catch (error) {
+    console.error("[GitHub Webhook Error]:", error);
+  }
+};

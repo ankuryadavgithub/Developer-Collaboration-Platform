@@ -97,7 +97,7 @@ const NotificationDropdown = () => {
     } else if (notification.type === "SYSTEM" && notification.title === "Invitation Accepted") {
       // If someone accepted, maybe take the inviter to the org members page
       if (notification.metadata?.organizationId) {
-        navigate(`/organization/${notification.metadata.organizationId}`);
+        navigate(`/organizations/${notification.metadata.organizationId}/members`);
       }
     }
   };

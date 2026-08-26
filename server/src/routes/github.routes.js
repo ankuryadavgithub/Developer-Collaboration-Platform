@@ -6,6 +6,7 @@ import {
   getOpenIssues,
   getPullRequests,
   getAccessibleRepositories,
+  handleGithubWebhook,
 } from "../controllers/github.controller.js";
 
 const router = express.Router({ mergeParams: true });
@@ -27,5 +28,8 @@ router.get(
 
 // Global user routes
 router.get("/repositories", requireAuth, getAccessibleRepositories);
+
+// Webhook receiver (no auth middleware because GitHub calls this directly)
+router.post("/webhook", express.json({type: 'application/json'}), handleGithubWebhook);
 
 export default router;

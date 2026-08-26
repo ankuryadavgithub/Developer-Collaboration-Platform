@@ -34,12 +34,38 @@ export const createProject = async (req, res) => {
           message: "A project with this name already exists in this workspace.",
         });
 
+    let githubProjectId = null;
+
+    // BUG 3 FIX: Use the Workspace Owner's token so any team member can sync!
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: { owner: true }
+    });
+    
+    if (workspace?.owner?.githubAccessToken) {
+      const syncToken = workspace.owner.githubAccessToken;
+      const repository = await prisma.repository.findUnique({
+        where: { workspaceId },
+      });
+      if (repository) {
+        try {
+          const { getGithubRepoDetails, createGithubProject } = await import("../services/github.service.js");
+          const { ownerId, repositoryId } = await getGithubRepoDetails(syncToken, repository.owner, repository.name);
+          githubProjectId = await createGithubProject(syncToken, ownerId, repositoryId, name);
+        } catch (err) {
+          console.error("Failed to create GitHub Project V2:", err);
+          // Non-fatal error, we still want to create the local project
+        }
+      }
+    }
+
     const project = await prisma.project.create({
       data: {
         workspaceId,
         name,
         description,
         createdById: req.user.id,
+        githubProjectId,
       },
     });
 

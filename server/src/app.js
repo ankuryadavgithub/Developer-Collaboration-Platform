@@ -34,10 +34,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/organizations", orgRoutes);
 app.use("/api/invitations", invitationRoutes);
 app.use("/api/notifications", notificationRoutes);
-app.use("/api/organizations/:orgId/workspaces", workspaceRoutes);
-app.use("/api/organizations/:orgId/workspaces/:workspaceId/members",workspaceMemberRoutes);
-
-
 // Base workspace route
 app.use("/api/organizations/:orgId/workspaces", workspaceRoutes);
 
@@ -50,7 +46,6 @@ app.use("/api/organizations/:orgId/workspaces/:workspaceId/dashboard", dashboard
 
 // We also mount the github routes here so they have access to the workspace context!
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/github", githubRoutes);
-app.use("/api/github", githubRoutes); // Keep global for /repositories
 
 app.use("/api/users", userRoutes);
 

@@ -8,6 +8,7 @@ import {
   getWorkspaceMembers,
   getAvailableOrgMembers,
   addWorkspaceMember,
+  updateWorkspaceMemberRole,
   removeWorkspaceMember,
 } from "../controllers/workspaceMember.controller.js";
 
@@ -17,10 +18,16 @@ router.get("/", requireAuth, requireWorkspaceMember, getWorkspaceMembers);
 router.get(
   "/available",
   requireAuth,
-  requireWorkspaceAdmin,
+  requireWorkspaceMember,
   getAvailableOrgMembers,
 );
 router.post("/", requireAuth, requireWorkspaceAdmin, addWorkspaceMember);
+router.patch(
+  "/:userId",
+  requireAuth,
+  requireWorkspaceAdmin,
+  updateWorkspaceMemberRole
+);
 router.delete(
   "/:userId",
   requireAuth,

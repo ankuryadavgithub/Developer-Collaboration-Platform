@@ -392,9 +392,9 @@ export const githubLogin = (req, res) => {
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID,
     redirect_uri: `http://localhost:5000/api/auth/github/callback`,
-    scope: "read:user user:email public_repo",
+    scope: "read:user user:email repo project",
     state,
-    prompt: "select_account", // <--- THIS IS THE MAGIC FIX
+    prompt: "consent", // <--- THIS IS THE MAGIC FIX TO FORCE RE-CONSENT
   });
 
   return res.redirect(
@@ -446,6 +446,7 @@ export const githubCallback = async (req, res) => {
         Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Developer-Collaboration-Platform",
       },
     });
     const githubUser = await githubUserResponse.json();
@@ -463,6 +464,7 @@ export const githubCallback = async (req, res) => {
             where: { id: decoded.id },
             data: {
               githubId: String(githubUser.id),
+              githubUsername: githubUser.login,
               githubAccessToken: githubToken,
             },
           });
@@ -481,6 +483,7 @@ export const githubCallback = async (req, res) => {
         Authorization: `Bearer ${githubToken}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "Developer-Collaboration-Platform",
       },
     });
 
@@ -494,7 +497,6 @@ export const githubCallback = async (req, res) => {
         `${process.env.CLIENT_URL}/login?error=github_email_required`,
       );
 
-    // Look for existing user by Github ID OR Email (so they share the same account)
     let user = await prisma.user.findFirst({
       where: {
         OR: [{ githubId: String(githubUser.id) }, { email: verifiedEmail }],
@@ -507,6 +509,7 @@ export const githubCallback = async (req, res) => {
         data: {
           email: verifiedEmail,
           githubId: String(githubUser.id),
+          githubUsername: githubUser.login,
           githubAccessToken: githubToken,
           avatar: githubUser.avatar_url,
           profileCompleted: false,
@@ -519,6 +522,7 @@ export const githubCallback = async (req, res) => {
         data: {
           avatar: githubUser.avatar_url,
           githubId: String(githubUser.id),
+          githubUsername: githubUser.login,
           githubAccessToken: githubToken,
         },
       });

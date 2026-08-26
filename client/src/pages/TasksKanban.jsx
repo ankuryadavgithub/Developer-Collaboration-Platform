@@ -33,7 +33,7 @@ const TasksKanban = () => {
     fetchTasks();
     fetchProjects();
     fetchMembers();
-  }, [workspaceId]);
+  }, [orgId, workspaceId]);
 
   const fetchTasks = async () => {
     try {
@@ -92,7 +92,8 @@ const TasksKanban = () => {
         { withCredentials: true }
       );
       setShowCreateModal(false);
-      setNewTask({ title: "", description: "", type: "FEATURE", priority: "MEDIUM", projectId: "" });
+      // Preserve projectId so user doesn't have to re-select it
+      setNewTask({ title: "", description: "", type: "FEATURE", priority: "MEDIUM", projectId: newTask.projectId });
       fetchTasks();
     } catch (err) {
       console.error("Failed to create task");
