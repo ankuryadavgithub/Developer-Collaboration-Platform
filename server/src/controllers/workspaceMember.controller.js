@@ -118,6 +118,11 @@ export const addWorkspaceMember = async (req, res) => {
         userId: parseInt(userId),
         role: role || "VIEWER",
       },
+      include: {
+        user: {
+          select: { id: true, username: true, email: true, avatar: true },
+        },
+      }
     });
 
     return res
@@ -131,6 +136,39 @@ export const addWorkspaceMember = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to add member to workspace." });
+  }
+};
+
+// @desc    Update a workspace member's role
+// @route   PATCH /api/organizations/:orgId/workspaces/:workspaceId/members/:userId
+export const updateWorkspaceMemberRole = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+    const targetUserId = parseInt(req.params.userId);
+    const { role } = req.body;
+
+    if (!role) {
+      return res.status(400).json({ success: false, message: "Role is required." });
+    }
+
+    if (targetUserId === req.workspace.createdById && role !== "WORKSPACE_ADMIN") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot demote the workspace creator.",
+      });
+    }
+
+    const updatedMember = await prisma.workspaceMember.update({
+      where: { workspaceId_userId: { workspaceId, userId: targetUserId } },
+      data: { role },
+      include: {
+        user: { select: { id: true, username: true, email: true, avatar: true } },
+      }
+    });
+
+    return res.status(200).json({ success: true, message: "Role updated successfully.", data: updatedMember });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update member role." });
   }
 };
 

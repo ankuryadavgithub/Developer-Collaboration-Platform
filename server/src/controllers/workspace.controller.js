@@ -19,12 +19,10 @@ export const createWorkspace = async (req, res) => {
     } = req.body;
 
     if (!name || !repositoryOption) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Workspace name and repository option are required.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Workspace name and repository option are required.",
+      });
     }
 
     const existingWorkspace = await prisma.workspace.findFirst({
@@ -37,7 +35,8 @@ export const createWorkspace = async (req, res) => {
     if (existingWorkspace) {
       return res.status(409).json({
         success: false,
-        message: "A workspace with this name already exists in the organization.",
+        message:
+          "A workspace with this name already exists in the organization.",
       });
     }
 
@@ -66,12 +65,10 @@ export const createWorkspace = async (req, res) => {
 
       const newRepo = await response.json();
       if (!response.ok)
-        return res
-          .status(response.status)
-          .json({
-            success: false,
-            message: newRepo.message || "Failed to create GitHub repository.",
-          });
+        return res.status(response.status).json({
+          success: false,
+          message: newRepo.message || "Failed to create GitHub repository.",
+        });
 
       repoData = {
         githubRepositoryId: newRepo.id.toString(), // Enforce String to prevent ID overflow
@@ -85,12 +82,10 @@ export const createWorkspace = async (req, res) => {
       };
     } else if (repositoryOption === "CONNECT_EXISTING") {
       if (!existingRepo || !existingRepo.id)
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Existing repository selection is invalid.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Existing repository selection is invalid.",
+        });
 
       // Ensure it's not already connected to a different workspace (1-to-1 enforcement)
       const existingDbRepo = await prisma.repository.findUnique({
@@ -98,13 +93,11 @@ export const createWorkspace = async (req, res) => {
       });
 
       if (existingDbRepo)
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "This GitHub repository is already connected to another workspace.",
-          });
+        return res.status(400).json({
+          success: false,
+          message:
+            "This GitHub repository is already connected to another workspace.",
+        });
 
       repoData = {
         githubRepositoryId: existingRepo.id.toString(),
@@ -154,21 +147,17 @@ export const createWorkspace = async (req, res) => {
       return workspace;
     });
 
-    return res
-      .status(201)
-      .json({
-        success: true,
-        message: "Workspace created successfully",
-        data: newWorkspace,
-      });
+    return res.status(201).json({
+      success: true,
+      message: "Workspace created successfully",
+      data: newWorkspace,
+    });
   } catch (error) {
     console.error("Create workspace error:", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Internal server error during workspace creation.",
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error during workspace creation.",
+    });
   }
 };
 
@@ -241,16 +230,204 @@ export const archiveWorkspace = async (req, res) => {
       data: { status: "ARCHIVED" },
     });
 
-    return res
-      .status(200)
-      .json({
-        success: true,
-        message: "Workspace archived successfully",
-        data: archived,
-      });
+    return res.status(200).json({
+      success: true,
+      message: "Workspace archived successfully",
+      data: archived,
+    });
   } catch (error) {
     return res
       .status(500)
       .json({ success: false, message: "Failed to archive workspace" });
+  }
+};
+
+// @desc    Unarchive Workspace
+// @route   PATCH /api/organizations/:orgId/workspaces/:workspaceId/unarchive
+export const unarchiveWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    const restored = await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { status: "ACTIVE" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Workspace restored successfully",
+      data: restored,
+    });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to restore workspace" });
+  }
+};
+
+// update workspace name and description
+export const updateWorkspace = async (req, res) => {
+  try {
+    let { name, description } = req.body;
+    const workspaceId = req.workspace.id;
+    const orgId = req.workspace.organizationId;
+    const oldName = req.workspace.name; // to show in notification
+
+    if (!name || name.trim() === "") {
+      return res
+        .status(400)
+        .json({ success: false, message: "Workspace name is required." });
+    }
+
+    name = name.trim();
+    description = description ? description.trim() : "";
+
+    // Uniqueness check: Does another workspace in this org have this name?
+    const existingWorkspace = await prisma.workspace.findFirst({
+      where: {
+        organizationId: orgId,
+        name: name,
+        id: { not: workspaceId }, // Exclude the current workspace
+      },
+    });
+
+    if (existingWorkspace) {
+      return res.status(409).json({
+        success: false,
+        message: "A workspace with this name already exists in the organization.",
+      });
+    }
+
+    const updatedWorkspace = await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { name, description },
+    });
+
+    // Notify organization members about the update (except the user who updated it)
+    const orgMembers = await prisma.organizationMember.findMany({
+      where: {
+        organizationId: orgId,
+        userId: { not: req.user.id }
+      },
+      select: { userId: true }
+    });
+
+    if (orgMembers.length > 0) {
+      const notifications = orgMembers.map(member => ({
+        userId: member.userId,
+        type: "SYSTEM",
+        title: "Workspace Updated",
+        message: `${req.user.username || 'A team member'} updated the workspace settings for '${name}'.`,
+        metadata: { workspaceId, orgId }
+      }));
+
+      await prisma.notification.createMany({
+        data: notifications
+      });
+    }
+
+    return res
+      .status(200)
+      .json({
+        success: true,
+        data: updatedWorkspace,
+        message: "Workspace updated successfully.",
+      });
+  } catch (error) {
+    console.error("Update workspace error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update workspace." });
+  }
+};
+
+// @desc    Soft delete (Archive) Workspace
+// @route   DELETE /api/organizations/:orgId/workspaces/:workspaceId
+export const deleteWorkspace = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    await prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { status: "ARCHIVED" },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Workspace archived successfully",
+    });
+  } catch (error) {
+    console.error("Delete workspace error:", error);
+    return res.status(500).json({ success: false, message: "Failed to archive workspace" });
+  }
+};
+
+// @desc    Update or Connect Repository
+// @route   POST /api/organizations/:orgId/workspaces/:workspaceId/repository
+export const updateRepository = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+    const { githubUrl } = req.body;
+
+    if (!githubUrl || !githubUrl.includes("github.com/")) {
+      return res.status(400).json({ success: false, message: "Valid GitHub repository URL is required." });
+    }
+
+    // Extract owner and repo name from URL (e.g., https://github.com/owner/repo)
+    const urlParts = githubUrl.split("github.com/")[1].split("/");
+    const owner = urlParts[0];
+    const name = urlParts[1]?.replace(".git", "");
+
+    if (!owner || !name) {
+      return res.status(400).json({ success: false, message: "Invalid GitHub URL format." });
+    }
+
+    const repoData = {
+      workspaceId,
+      githubRepositoryId: `${owner}-${name}`, // Mock ID for manually connected repos
+      name: name,
+      fullName: `${owner}/${name}`,
+      owner: owner,
+      description: "Manually connected repository",
+      visibility: "Unknown",
+      defaultBranch: "main",
+      htmlUrl: githubUrl,
+    };
+
+    const repository = await prisma.repository.upsert({
+      where: { workspaceId: workspaceId },
+      update: repoData,
+      create: repoData,
+    });
+
+    return res.status(200).json({ success: true, data: repository, message: "Repository connected successfully." });
+  } catch (error) {
+    console.error("Update repository error:", error);
+    return res.status(500).json({ success: false, message: "Failed to connect repository." });
+  }
+};
+
+// @desc    Remove Repository Connection
+// @route   DELETE /api/organizations/:orgId/workspaces/:workspaceId/repository
+export const removeRepository = async (req, res) => {
+  try {
+    const workspaceId = req.workspace.id;
+
+    const existingRepo = await prisma.repository.findUnique({
+      where: { workspaceId },
+    });
+
+    if (!existingRepo) {
+      return res.status(400).json({ success: false, message: "No repository connected to this workspace." });
+    }
+
+    await prisma.repository.delete({
+      where: { workspaceId },
+    });
+
+    return res.status(200).json({ success: true, message: "Repository disconnected successfully." });
+  } catch (error) {
+    console.error("Remove repository error:", error);
+    return res.status(500).json({ success: false, message: "Failed to disconnect repository." });
   }
 };
