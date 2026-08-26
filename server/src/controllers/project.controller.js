@@ -36,14 +36,14 @@ export const createProject = async (req, res) => {
 
     let githubProjectId = null;
 
-    // BUG 3 FIX: Use the Workspace Owner's token so any team member can sync!
+    // BUG 3 FIX: Use the Workspace Creator's token so any team member can sync!
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      include: { owner: true }
+      include: { createdBy: true }
     });
     
-    if (workspace?.owner?.githubAccessToken) {
-      const syncToken = workspace.owner.githubAccessToken;
+    if (workspace?.createdBy?.githubAccessToken) {
+      const syncToken = workspace.createdBy.githubAccessToken;
       const repository = await prisma.repository.findUnique({
         where: { workspaceId },
       });

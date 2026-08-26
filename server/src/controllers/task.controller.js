@@ -68,14 +68,14 @@ export const createTask = async (req, res) => {
     let githubItemId = null;
     let githubIssueNum = null;
 
-    // BUG 3 FIX: Use the Workspace Owner's token so any team member can sync!
+    // BUG 3 FIX: Use the Workspace Creator's token so any team member can sync!
     const workspace = await prisma.workspace.findUnique({
       where: { id: workspaceId },
-      include: { owner: true }
+      include: { createdBy: true }
     });
     
-    if (workspace?.owner?.githubAccessToken && project.githubProjectId) {
-      const syncToken = workspace.owner.githubAccessToken;
+    if (workspace?.createdBy?.githubAccessToken && project.githubProjectId) {
+      const syncToken = workspace.createdBy.githubAccessToken;
       const repository = await prisma.repository.findUnique({
         where: { workspaceId },
       });
@@ -268,12 +268,12 @@ export const updateTask = async (req, res) => {
     if (existing.githubIssueNum) {
       const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId },
-        include: { owner: true }
+        include: { createdBy: true }
       });
       const repository = await prisma.repository.findUnique({ where: { workspaceId } });
       
-      if (workspace?.owner?.githubAccessToken && repository) {
-        const syncToken = workspace.owner.githubAccessToken;
+      if (workspace?.createdBy?.githubAccessToken && repository) {
+        const syncToken = workspace.createdBy.githubAccessToken;
         try {
           const { assignGithubIssue, updateGithubIssueState } = await import("../services/github.service.js");
           
