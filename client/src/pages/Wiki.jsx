@@ -21,6 +21,9 @@ const Wiki = () => {
   const [githubWikiExists, setGithubWikiExists] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [repoInfo, setRepoInfo] = useState(null);
+  
+  // Bug 3 Fix: Unsaved Changes tracking
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // 1. Fetch the list of pages
   const fetchPages = async () => {
@@ -67,6 +70,10 @@ const Wiki = () => {
 
   // 2. Fetch full contents of a specific page
   const loadPage = async (pageId) => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved changes. Discard them?")) return;
+    }
+    
     try {
       setLoading(true);
       const res = await axios.get(
@@ -77,6 +84,7 @@ const Wiki = () => {
       setActivePageTitle(res.data.data.title);
       setActivePageContent(res.data.data.content || "");
       setIsPreview(true);
+      setHasUnsavedChanges(false);
     } catch (err) {
       console.error("Failed to load page content", err);
     } finally {
@@ -85,10 +93,14 @@ const Wiki = () => {
   };
 
   const handleNewPage = () => {
+    if (hasUnsavedChanges) {
+      if (!window.confirm("You have unsaved changes. Discard them?")) return;
+    }
     setActivePageId("new");
     setActivePageTitle("Untitled Page");
     setActivePageContent("# Start typing your documentation here...");
     setIsPreview(false);
+    setHasUnsavedChanges(false);
   };
 
   // 3. Save or Update logic
@@ -112,6 +124,7 @@ const Wiki = () => {
         fetchPages();
       }
       setIsPreview(true);
+      setHasUnsavedChanges(false);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to save page");
     } finally {
@@ -127,7 +140,10 @@ const Wiki = () => {
         `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/wiki/${pageId}`,
         { withCredentials: true }
       );
-      if (activePageId === pageId) setActivePageId(null);
+      if (activePageId === pageId) {
+        setActivePageId(null);
+        setHasUnsavedChanges(false);
+      }
       fetchPages();
     } catch (err) {
       alert("Failed to delete page");
@@ -259,7 +275,6 @@ const Wiki = () => {
                   <div className="flex items-center gap-2 truncate">
                     <ChevronRight size={14} className={activePageId === page.id ? "opacity-100" : "opacity-0 group-hover:opacity-100 transition-opacity"} />
                     <span className="truncate">{page.title}</span>
-                    {/* Sync Status Indicators */}
                     {page.isDraft ? (
                       <span className="w-2 h-2 rounded-full bg-yellow-500 shrink-0" title="Unpublished changes"></span>
                     ) : (
@@ -288,14 +303,19 @@ const Wiki = () => {
                   <input 
                     type="text"
                     value={activePageTitle}
-                    onChange={(e) => setActivePageTitle(e.target.value)}
+                    onChange={(e) => { 
+                      setActivePageTitle(e.target.value);
+                      setHasUnsavedChanges(true);
+                    }}
                     disabled={isPreview}
                     className={`bg-transparent text-xl font-bold text-white outline-none w-1/2 ${isPreview ? "" : "border-b border-indigo-500/50 pb-1"}`}
                     placeholder="Page Title"
                   />
                   <div className="flex items-center gap-3">
-                    {/* Page Status text */}
-                    {pages.find(p => p.id === activePageId)?.isDraft && (
+                    {hasUnsavedChanges && !isPreview && (
+                      <span className="text-xs text-yellow-500">Unsaved changes</span>
+                    )}
+                    {pages.find(p => p.id === activePageId)?.isDraft && !hasUnsavedChanges && (
                       <span className="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-1 rounded-md border border-yellow-500/20">
                         Unpublished Draft
                       </span>
@@ -328,7 +348,10 @@ const Wiki = () => {
                   ) : (
                     <textarea
                       value={activePageContent}
-                      onChange={(e) => setActivePageContent(e.target.value)}
+                      onChange={(e) => {
+                        setActivePageContent(e.target.value);
+                        setHasUnsavedChanges(true);
+                      }}
                       className="w-full h-full bg-transparent text-slate-200 outline-none resize-none font-mono text-sm leading-relaxed"
                       placeholder="Write your markdown here..."
                     />

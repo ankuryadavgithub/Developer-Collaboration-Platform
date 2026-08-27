@@ -6,6 +6,27 @@ import os from 'os';
 
 const prisma = new PrismaClient();
 
+// Helper: Recursively get all .md files in a directory
+const getAllMarkdownFiles = (dir, fileList = []) => {
+  if (!fs.existsSync(dir)) return fileList;
+  const files = fs.readdirSync(dir);
+  for (const file of files) {
+    if (file === '.git') continue; // Skip git internals
+    const filePath = path.join(dir, file);
+    if (fs.statSync(filePath).isDirectory()) {
+      getAllMarkdownFiles(filePath, fileList);
+    } else if (filePath.endsWith('.md')) {
+      fileList.push(filePath);
+    }
+  }
+  return fileList;
+};
+
+// Helper: Sanitize title for safe file system usage
+const sanitizeFilename = (title) => {
+  return title.replace(/[\/\\?%*:|"<>]/g, '-');
+};
+
 // Get all wiki pages for a workspace (lightweight list)
 export const getWikiPages = async (req, res) => {
   try {
@@ -209,11 +230,18 @@ export const fetchWikiFromGithub = async (req, res) => {
     try {
       await git.clone(remoteUrl, tempDir);
       
-      const files = fs.readdirSync(tempDir).filter(file => file.endsWith('.md'));
+      // Fix #5: Recursively fetch nested folders
+      const mdFiles = getAllMarkdownFiles(tempDir);
+      const processedGithubPaths = [];
       
-      for (const file of files) {
-        const title = file.replace('.md', '');
-        const content = fs.readFileSync(path.join(tempDir, file), 'utf8');
+      for (const fullPath of mdFiles) {
+        // Keep slashes standardized for githubPath
+        const relPath = path.relative(tempDir, fullPath).replace(/\\/g, '/'); 
+        processedGithubPaths.push(relPath);
+        
+        // Use relative path minus extension for title to ensure uniqueness in nested folders
+        const title = relPath.replace(/\.md$/, ''); 
+        const content = fs.readFileSync(fullPath, 'utf8');
         
         await prisma.wikiPage.upsert({
           where: {
@@ -224,7 +252,7 @@ export const fetchWikiFromGithub = async (req, res) => {
           },
           update: {
             content: content,
-            githubPath: file,
+            githubPath: relPath,
             lastSyncedAt: new Date(),
             isDraft: false
           },
@@ -232,10 +260,25 @@ export const fetchWikiFromGithub = async (req, res) => {
             workspaceId: parseInt(workspaceId),
             title: title,
             content: content,
-            githubPath: file,
+            githubPath: relPath,
             lastSyncedAt: new Date(),
             isDraft: false,
             createdById: req.user.id
+          }
+        });
+      }
+      
+      // Fix #1 (Part 1) & #6: Deletion Sync. Delete pages from DB that are gone from GitHub.
+      // We ONLY delete pages that were already synced (isDraft: false).
+      // We protect unsynced local drafts from being wiped.
+      if (processedGithubPaths.length > 0) {
+        await prisma.wikiPage.deleteMany({
+          where: {
+            workspaceId: parseInt(workspaceId),
+            isDraft: false, // only delete previously synced pages
+            githubPath: {
+              notIn: processedGithubPaths
+            }
           }
         });
       }
@@ -293,9 +336,28 @@ export const pushWikiToGithub = async (req, res) => {
       await localGit.addConfig('user.name', user.username || 'Dev Collaboration Platform');
       await localGit.addConfig('user.email', user.email);
       
+      // Fix #1 (Part 2) & #4: Wipe existing .md files so Git detects deletions and renames
+      const existingFiles = getAllMarkdownFiles(tempDir);
+      existingFiles.forEach(file => fs.unlinkSync(file));
+      
+      // Write current DB pages
       for (const page of pages) {
-        const filename = page.githubPath || `${page.title}.md`;
-        fs.writeFileSync(path.join(tempDir, filename), page.content || "");
+        // Fix #2: Sanitize titles if they don't have a githubPath yet
+        const relPath = page.githubPath || `${sanitizeFilename(page.title)}.md`;
+        const fullPath = path.join(tempDir, relPath);
+        
+        // Ensure any subdirectories exist before writing (e.g., if relPath is "Backend/Setup.md")
+        fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+        
+        fs.writeFileSync(fullPath, page.content || "");
+        
+        // If it was a new page, save the new githubPath back to DB
+        if (!page.githubPath) {
+           await prisma.wikiPage.update({
+             where: { id: page.id },
+             data: { githubPath: relPath }
+           });
+        }
       }
       
       await localGit.add('./*');
@@ -303,10 +365,10 @@ export const pushWikiToGithub = async (req, res) => {
       
       if (status.files.length > 0) {
         await localGit.commit('Updated wiki from Developer Collaboration Platform');
-        // Force push allows overwriting github with our platform's version
         await localGit.push('origin', 'HEAD:master', { '--force': null }); 
       }
       
+      // Update DB to mark as synced
       await prisma.wikiPage.updateMany({
         where: { workspaceId: parseInt(workspaceId) },
         data: {
