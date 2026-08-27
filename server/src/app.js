@@ -15,6 +15,7 @@ import taskRoutes from "./routes/task.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
+import wikiRoutes from "./routes/wiki.routes.js";
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use("/api/organizations/:orgId/workspaces/:workspaceId/projects", projectRou
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/sprints", sprintRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/tasks", taskRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/dashboard", dashboardRoutes);
+app.use("/api/organizations/:orgId/workspaces/:workspaceId/wiki", wikiRoutes);
 
 // We also mount the github routes here so they have access to the workspace context!
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/github", githubRoutes);
