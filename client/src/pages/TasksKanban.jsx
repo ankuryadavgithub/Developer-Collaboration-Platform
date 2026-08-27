@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { ListTodo, Plus, GripVertical, AlertCircle, CheckCircle2, User, Calendar, Star } from "lucide-react";
+import { ListTodo, Plus, GripVertical, AlertCircle, CheckCircle2, User, Calendar, Star, GitPullRequest } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import Navbar from "../components/layout/Navbar";
 
@@ -18,6 +18,7 @@ const TasksKanban = () => {
   const [tasks, setTasks] = useState([]);
   const [projects, setProjects] = useState([]);
   const [members, setMembers] = useState([]);
+  const [activePRs, setActivePRs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
@@ -33,7 +34,22 @@ const TasksKanban = () => {
     fetchTasks();
     fetchProjects();
     fetchMembers();
+    fetchActivePRs();
   }, [orgId, workspaceId]);
+
+  const fetchActivePRs = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/github/pull-requests`,
+        { withCredentials: true }
+      );
+      if (res.data.success) {
+        setActivePRs(res.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch PRs for Kanban", error);
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -210,7 +226,10 @@ const TasksKanban = () => {
                     </div>
                     
                     <div className="p-3 flex-1 overflow-y-auto space-y-3 min-h-[150px]">
-                      {columnTasks.map(task => (
+                      {columnTasks.map(task => {
+                        const taskKey = task.key || `TASK-${task.id}`;
+                        const linkedPR = activePRs.find(pr => pr.title.includes(taskKey));
+                        return (
                         <div
                           key={task.id}
                           draggable
@@ -220,9 +239,27 @@ const TasksKanban = () => {
                         >
                           <div className="flex justify-between items-start mb-2">
                             <span className="text-xs font-semibold text-slate-400">
-                              {task.key || `TASK-${task.id}`}
+                              {taskKey}
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                              {linkedPR && (
+                                <a 
+                                  href={linkedPR.url} 
+                                  target="_blank" 
+                                  rel="noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className={`text-[10px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-1 border hover:opacity-80 transition-opacity ${
+                                    linkedPR.status === "Review" 
+                                      ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                      : linkedPR.status === "Draft"
+                                      ? "bg-slate-500/10 text-slate-400 border-slate-500/20"
+                                      : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                                  }`}
+                                  title={`Linked PR: ${linkedPR.title}`}
+                                >
+                                  <GitPullRequest size={10} /> {linkedPR.status === "Draft" ? "Draft PR" : linkedPR.status === "Review" ? "PR Review" : "PR Open"}
+                                </a>
+                              )}
                               {task.storyPoints > 0 && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-violet-500/20 text-violet-400 flex items-center gap-1">
                                   <Star size={10} /> {task.storyPoints}
@@ -264,7 +301,7 @@ const TasksKanban = () => {
                             )}
                           </div>
                         </div>
-                      ))}
+                      );})}
                       
                       {columnTasks.length === 0 && (
                         <div className="h-full w-full flex items-center justify-center border-2 border-dashed border-slate-800 rounded-lg text-sm text-slate-500 font-medium p-4 text-center">

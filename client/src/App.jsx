@@ -28,6 +28,7 @@ import {
 } from "./context/NavigationLoadingContext";
 import "./index.css";
 import GithubCallback from "./pages/githubCallback";
+import PullRequests from "./pages/PullRequests";
 import Projects from "./pages/Projects";
 import ProjectDetails from "./pages/ProjectDetails";
 import Sprints from "./pages/Sprints";
@@ -135,6 +136,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Sprints />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/pull-requests"
+          element={
+            <ProtectedRoute>
+              <PullRequests />
             </ProtectedRoute>
           }
         />

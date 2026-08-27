@@ -103,7 +103,7 @@ function Sidebar({ isOpen, setIsOpen }) {
                 </span>
               </div>
               <div
-                onClick={() => alert("Coming Soon!")}
+                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/pull-requests`)}
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
                 <GitPullRequestArrow
