@@ -1,7 +1,8 @@
 import { Book, BookAIcon, BookCheck, BookCopy, BookIcon, BookOpenText, BubblesIcon, Calendar, Calendar1Icon, ChartBar, CircleArrowDown, CircleCheck, Folder, GitBranchMinusIcon, GitCommit, GitCommitHorizontalIcon, GitCompare, GitMergeConflict, GitPullRequest, GitPullRequestArrow, HomeIcon, LucideGitCommit, LucideMirrorRectangular, MessageCircle, Settings, Ticket, User2, User2Icon, UserCircleIcon, UserIcon, UserRound, PanelLeftOpen, PanelLeftClose, LayoutDashboard, CircleUserRound, ShieldCheck} from "lucide-react";
 
 import { useOrganization } from "../../context/OrganizationContext";
-import {useState} from 'react'
+import {useState, useEffect} from 'react';
+import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 
 function Sidebar({ isOpen, setIsOpen }) {
@@ -9,6 +10,16 @@ function Sidebar({ isOpen, setIsOpen }) {
   const { orgId, workspaceId } = useParams();
   const navigate = useNavigate();
   const { organizations, currentOrg, switchOrganization, loading } = useOrganization();
+    
+  const [workspaceRole, setWorkspaceRole] = useState(null);
+
+  useEffect(() => {
+    if (orgId && workspaceId) {
+      axios.get(`http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}`, { withCredentials: true })
+        .then(res => setWorkspaceRole(res.data.myRole))
+        .catch(console.error);
+    }
+  }, [orgId, workspaceId]);
     
   // Check if the user is allowed to manage sprints (Owner, Admin, or Manager)
   const canAccessSprints = currentOrg?.myRole !== "MEMBER";
@@ -49,7 +60,10 @@ function Sidebar({ isOpen, setIsOpen }) {
               <select
                 className="w-full bg-[#1c1f2e] text-white text-sm font-semibold rounded-lg p-2 outline-none border border-slate-700 hover:border-slate-500 transition-colors cursor-pointer"
                 value={currentOrg?.id || ""}
-                onChange={(e) => switchOrganization(e.target.value)}
+                onChange={(e) => {
+                  switchOrganization(e.target.value);
+                  navigate("/organization"); // Force URL redirect to clear old workspace state
+                }}
               >
                 {organizations.map((org) => (
                   <option key={org.id} value={org.id}>
@@ -220,21 +234,23 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Team
                 </span>
               </div>
-              <div
-                onClick={() =>
-                  navigate(
-                    `/organizations/${orgId}/workspaces/${workspaceId}/settings`,
-                  )
-                }
-                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
-              >
-                <Settings size={18} className="text-slate-300 shrink-0" />
-                <span
-                  className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
+              {workspaceRole !== "VIEWER" && (
+                <div
+                  onClick={() =>
+                    navigate(
+                      `/organizations/${orgId}/workspaces/${workspaceId}/settings`,
+                    )
+                  }
+                  className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
                 >
-                  Settings
-                </span>
-              </div>
+                  <Settings size={18} className="text-slate-300 shrink-0" />
+                  <span
+                    className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
+                  >
+                    Settings
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {!workspaceId && <div className="flex-1" />}

@@ -17,6 +17,7 @@ const WorkspaceSettings = () => {
   const [status, setStatus] = useState("ACTIVE");
   const [previousRepo, setPreviousRepo] = useState(null);
   const [initialData, setInitialData] = useState({ name: "", description: "" });
+  const [myRole, setMyRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ text: "", type: "" });
@@ -43,6 +44,11 @@ const WorkspaceSettings = () => {
         { withCredentials: true }
       );
       if (res.data.success) {
+        if (res.data.myRole === "VIEWER") {
+          navigate(`/organizations/${orgId}/workspaces/${workspaceId}/dashboard`);
+          return;
+        }
+        
         const data = res.data.data;
         const fetchedName = data.name || "";
         const fetchedDesc = data.description || "";
@@ -51,6 +57,7 @@ const WorkspaceSettings = () => {
         setStatus(data.status || "ACTIVE");
         setInitialData({ name: fetchedName, description: fetchedDesc });
         setRepository(data.repository || null);
+        setMyRole(res.data.myRole);
       }
     } catch (error) {
       console.error("Failed to fetch workspace", error);
@@ -213,89 +220,93 @@ const WorkspaceSettings = () => {
           </div>
 
           {/* Repository Configuration */}
-          <div className={`bg-[#1c1f2e] p-6 md:p-8 rounded-xl border border-[#ffffff]/10 shadow-lg mt-8 ${status === "ARCHIVED" ? "opacity-60 pointer-events-none" : ""}`}>
-            <h2 className="text-xl font-bold mb-6 border-b border-[#ffffff]/10 pb-4">Repository Configuration</h2>
-            
-            {repository ? (
-              <div className="bg-[#0f111a] p-4 rounded-lg border border-[#ffffff]/10 flex justify-between items-center">
-                <div>
-                  <p className="text-white font-bold">{repository.fullName}</p>
-                  <a href={repository.htmlUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-400 hover:underline">
-                    {repository.htmlUrl}
-                  </a>
-                </div>
-                <button
-                  onClick={handleRemoveRepo}
-                  className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
-                >
-                  Disconnect
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {previousRepo && (
-                  <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 flex justify-between items-center">
-                    <div>
-                      <p className="text-sm text-blue-300 mb-1">Previously connected to</p>
-                      <p className="text-white font-bold">{previousRepo.fullName}</p>
-                    </div>
-                    <button
-                      onClick={(e) => handleConnectRepo(e, previousRepo.htmlUrl)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-                    >
-                      Reconnect
-                    </button>
+          {myRole === "WORKSPACE_ADMIN" && (
+            <div className={`bg-[#1c1f2e] p-6 md:p-8 rounded-xl border border-[#ffffff]/10 shadow-lg mt-8 ${status === "ARCHIVED" ? "opacity-60 pointer-events-none" : ""}`}>
+              <h2 className="text-xl font-bold mb-6 border-b border-[#ffffff]/10 pb-4">Repository Configuration</h2>
+              
+              {repository ? (
+                <div className="bg-[#0f111a] p-4 rounded-lg border border-[#ffffff]/10 flex justify-between items-center">
+                  <div>
+                    <p className="text-white font-bold">{repository.fullName}</p>
+                    <a href={repository.htmlUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-400 hover:underline">
+                      {repository.htmlUrl}
+                    </a>
                   </div>
-                )}
-                
-                <div>
-                  {previousRepo && <p className="text-sm text-slate-400 mb-4 text-center">--- OR ---</p>}
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Connect a new repository</label>
-                  <form onSubmit={handleConnectRepo} className="flex gap-4">
-                    <input
-                      type="url"
-                      value={repoUrl}
-                      onChange={(e) => setRepoUrl(e.target.value)}
-                      placeholder="https://github.com/owner/repo"
-                      required
-                      className="flex-1 bg-[#0f111a] border border-[#ffffff]/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-                    >
-                      Connect
-                    </button>
-                  </form>
+                  <button
+                    onClick={handleRemoveRepo}
+                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+                  >
+                    Disconnect
+                  </button>
                 </div>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="space-y-6">
+                  {previousRepo && (
+                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-blue-300 mb-1">Previously connected to</p>
+                        <p className="text-white font-bold">{previousRepo.fullName}</p>
+                      </div>
+                      <button
+                        onClick={(e) => handleConnectRepo(e, previousRepo.htmlUrl)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                      >
+                        Reconnect
+                      </button>
+                    </div>
+                  )}
+                  
+                  <div>
+                    {previousRepo && <p className="text-sm text-slate-400 mb-4 text-center">--- OR ---</p>}
+                    <label className="block text-sm font-medium text-slate-400 mb-2">Connect a new repository</label>
+                    <form onSubmit={handleConnectRepo} className="flex gap-4">
+                      <input
+                        type="url"
+                        value={repoUrl}
+                        onChange={(e) => setRepoUrl(e.target.value)}
+                        placeholder="https://github.com/owner/repo"
+                        required
+                        className="flex-1 bg-[#0f111a] border border-[#ffffff]/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                      />
+                      <button
+                        type="submit"
+                        className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                      >
+                        Connect
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Danger Zone */}
-          <div className="bg-red-950/20 p-6 md:p-8 rounded-xl border border-red-500/30 shadow-lg mt-8">
-            <h2 className="text-xl font-bold mb-2 text-red-500">Danger Zone</h2>
-            <p className="text-slate-400 mb-6 border-b border-red-500/20 pb-4">
-              Destructive actions for this workspace. Proceed with caution.
-            </p>
-            
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-              <div>
-                <h3 className="text-white font-medium">{status === "ARCHIVED" ? "Restore Workspace" : "Archive Workspace"}</h3>
-                <p className="text-sm text-slate-400">
-                  {status === "ARCHIVED" 
-                    ? "Restore this workspace to make it active and editable again." 
-                    : "Soft delete this workspace. It will be hidden from everyone's dashboard."}
-                </p>
+          {myRole === "WORKSPACE_ADMIN" && (
+            <div className="bg-red-950/20 p-6 md:p-8 rounded-xl border border-red-500/30 shadow-lg mt-8">
+              <h2 className="text-xl font-bold mb-2 text-red-500">Danger Zone</h2>
+              <p className="text-slate-400 mb-6 border-b border-red-500/20 pb-4">
+                Destructive actions for this workspace. Proceed with caution.
+              </p>
+              
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                  <h3 className="text-white font-medium">{status === "ARCHIVED" ? "Restore Workspace" : "Archive Workspace"}</h3>
+                  <p className="text-sm text-slate-400">
+                    {status === "ARCHIVED" 
+                      ? "Restore this workspace to make it active and editable again." 
+                      : "Soft delete this workspace. It will be hidden from everyone's dashboard."}
+                  </p>
+                </div>
+                <button
+                  onClick={handleToggleArchive}
+                  className={`${status === "ARCHIVED" ? 'bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20' : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'} border font-bold py-2 px-6 rounded-lg transition-colors whitespace-nowrap`}
+                >
+                  {status === "ARCHIVED" ? "Restore Workspace" : "Archive Workspace"}
+                </button>
               </div>
-              <button
-                onClick={handleToggleArchive}
-                className={`${status === "ARCHIVED" ? 'bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20' : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'} border font-bold py-2 px-6 rounded-lg transition-colors whitespace-nowrap`}
-              >
-                {status === "ARCHIVED" ? "Restore Workspace" : "Archive Workspace"}
-              </button>
             </div>
-          </div>
+          )}
 
         </div>
       </main>

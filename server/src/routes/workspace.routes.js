@@ -6,6 +6,7 @@ import {
 } from "../middleware/org.middleware.js";
 import {
   requireWorkspaceMember,
+  requireWorkspaceManager,
   requireWorkspaceAdmin,
 } from "../middleware/workspace.middleware.js";
 import {
@@ -52,7 +53,7 @@ router.patch(
 router.patch(
   "/:workspaceId",
   requireAuth,
-  requireWorkspaceAdmin,
+  requireWorkspaceManager,
   updateWorkspace,
 );
 

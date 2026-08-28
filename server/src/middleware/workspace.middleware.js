@@ -104,4 +104,5 @@ export const checkWorkspaceRole = (allowedRoles = []) => {
 };
 
 export const requireWorkspaceMember = checkWorkspaceRole();
+export const requireWorkspaceManager = checkWorkspaceRole(["WORKSPACE_ADMIN", "CONTRIBUTOR"]);
 export const requireWorkspaceAdmin = checkWorkspaceRole(["WORKSPACE_ADMIN"]);

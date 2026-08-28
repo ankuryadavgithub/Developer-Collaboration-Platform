@@ -26,7 +26,8 @@ export const searchUsersToInvite = async (req, res) => {
         ],
         NOT: {
           OR: [
-            { organizationMembers: { some: { organizationId: orgId } } },
+            // Fix: If a user is part of ANY organization, hide them from search globally
+            { organizationMembers: { some: {} } },
             {
               invitationsReceived: {
                 some: { organizationId: orgId, status: "PENDING" },

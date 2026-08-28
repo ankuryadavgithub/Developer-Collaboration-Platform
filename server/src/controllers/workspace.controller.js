@@ -211,7 +211,11 @@ export const getWorkspaceDetails = async (req, res) => {
       },
     });
 
-    return res.status(200).json({ success: true, data: workspace });
+    return res.status(200).json({ 
+      success: true, 
+      data: workspace,
+      myRole: req.workspaceRole
+    });
   } catch (error) {
     return res
       .status(500)
