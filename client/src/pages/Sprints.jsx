@@ -4,6 +4,7 @@ import axios from "axios";
 import { Play, Plus, CheckCircle, Clock, GripVertical } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import Navbar from "../components/layout/Navbar";
+import { useOrganization } from "../context/OrganizationContext";
 
 const Sprints = () => {
   const { orgId, workspaceId } = useParams();
@@ -16,6 +17,8 @@ const Sprints = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newSprint, setNewSprint] = useState({ name: "", goal: "", startDate: "", endDate: "" });
+  const { currentOrg } = useOrganization();
+  const canAccessSprints = currentOrg?.myRole !== "MEMBER";
 
   useEffect(() => {
     fetchSprintsAndBacklog();
@@ -154,7 +157,21 @@ const Sprints = () => {
       <main className="flex-1 p-4 w-full h-full overflow-y-auto min-w-0">
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
         
-        <div className="max-w-7xl mx-auto mt-6">
+        {!canAccessSprints ? (
+          <div className="flex flex-col items-center justify-center h-[calc(100vh-100px)] text-center px-4">
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full">
+              <div className="bg-red-500/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Play size={28} className="text-red-500" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-3">Access Denied</h2>
+              <p className="text-slate-400 mb-6 leading-relaxed">
+                You do not have permission to access the Sprint Planning board. Only Organization Owners, Admins, and Managers can manage sprints.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="max-w-7xl mx-auto mt-6">
           <div className="flex items-center justify-between mb-8 pb-6 border-b border-[#ffffff]/10">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3 text-white">
@@ -164,12 +181,14 @@ const Sprints = () => {
                 Drag and drop tasks from your backlog to plan your sprints
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
-            >
-              <Plus size={20} /> New Sprint
-            </button>
+            {canAccessSprints && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-colors shadow-lg shadow-blue-500/20"
+              >
+                <Plus size={20} /> New Sprint
+              </button>
+            )}
           </div>
 
           {loading ? (
@@ -379,6 +398,8 @@ const Sprints = () => {
               </form>
             </div>
           </div>
+        )}
+        </>
         )}
       </main>
     </div>

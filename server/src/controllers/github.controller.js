@@ -5,18 +5,31 @@ const prisma = new PrismaClient();
 
 // Now async, and pulls securely from the DB using the user ID
 export const getGithubToken = async (req, res) => {
+  // 1. Try to get the current user's token first
   const user = await prisma.user.findUnique({
     where: { id: req.user.id },
   });
 
-  const githubToken = user?.githubAccessToken;
+  let githubToken = user?.githubAccessToken;
 
+  // 2. FALLBACK: If the local user doesn't have a token, use the Workspace Creator's token!
+  if (!githubToken && req.workspace?.id) {
+    const workspace = await prisma.workspace.findUnique({
+      where: { id: req.workspace.id },
+      include: { createdBy: true }
+    });
+    
+    if (workspace?.createdBy?.githubAccessToken) {
+      githubToken = workspace.createdBy.githubAccessToken;
+    }
+  }
+
+  // 3. If STILL no token is found anywhere, return an error
   if (!githubToken) {
     res.status(403).json({
       success: false,
-      message: "GitHub is not connected. Please log in with GitHub.",
+      message: "GitHub is not connected to this workspace.",
     });
-
     return null;
   }
 

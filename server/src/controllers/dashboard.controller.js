@@ -4,19 +4,30 @@ const prisma = new PrismaClient();
 
 const calculateSprintProgress = (tasks) => {
   if (!tasks || tasks.length === 0) return 0;
-  const totalPoints = tasks.reduce((sum, t) => sum + (t.storyPoints || 0), 0);
-  const completedPoints = tasks
-    .filter((t) => t.status === "DONE")
-    .reduce((sum, t) => sum + (t.storyPoints || 0), 0);
-  if (totalPoints > 0) return Math.round((completedPoints / totalPoints) * 100);
-  const completed = tasks.filter((t) => t.status === "DONE").length;
-  return Math.round((completed / tasks.length) * 100);
+  
+  // Calculate progress based on the Kanban columns
+  // TODO = 0%, IN_PROGRESS = 33%, IN_REVIEW = 66%, DONE = 100%
+  const totalProgress = tasks.reduce((sum, t) => {
+    if (t.status === "DONE") return sum + 100;
+    if (t.status === "IN_REVIEW") return sum + 66;
+    if (t.status === "IN_PROGRESS") return sum + 33;
+    return sum;
+  }, 0);
+
+  return Math.round(totalProgress / tasks.length);
 };
 
 const calculateProjectProgress = (tasks) => {
   if (!tasks || tasks.length === 0) return 0;
-  const completed = tasks.filter((t) => t.status === "DONE").length;
-  return Math.round((completed / tasks.length) * 100);
+  
+  const totalProgress = tasks.reduce((sum, t) => {
+    if (t.status === "DONE") return sum + 100;
+    if (t.status === "IN_REVIEW") return sum + 66;
+    if (t.status === "IN_PROGRESS") return sum + 33;
+    return sum;
+  }, 0);
+
+  return Math.round(totalProgress / tasks.length);
 };
 
 // @desc    Get aggregated dashboard data for a workspace

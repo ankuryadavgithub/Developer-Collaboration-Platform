@@ -9,12 +9,16 @@ function Sidebar({ isOpen, setIsOpen }) {
   const { orgId, workspaceId } = useParams();
   const navigate = useNavigate();
   const { organizations, currentOrg, switchOrganization, loading } = useOrganization();
+    
+  // Check if the user is allowed to manage sprints (Owner, Admin, or Manager)
+  const canAccessSprints = currentOrg?.myRole !== "MEMBER";
   
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
 
     return (
       <>
+
         {isOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -130,24 +134,26 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Commits
                 </span>
               </div>
-              <div
-                onClick={() =>
-                  navigate(
-                    `/organizations/${orgId}/workspaces/${workspaceId}/sprints`,
-                  )
-                }
-                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
-              >
-                <CircleArrowDown
-                  size={18}
-                  className="text-slate-300 shrink-0"
-                />
-                <span
-                  className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
+              {canAccessSprints && (
+                <div
+                  onClick={() =>
+                    navigate(
+                      `/organizations/${orgId}/workspaces/${workspaceId}/sprints`,
+                    )
+                  }
+                  className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
                 >
-                  Sprints
-                </span>
-              </div>
+                  <CircleArrowDown
+                    size={18}
+                    className="text-slate-300 shrink-0"
+                  />
+                  <span
+                    className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
+                  >
+                    Sprints
+                  </span>
+                </div>
+              )}
               <div
                 onClick={() => alert("Coming Soon!")}
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
