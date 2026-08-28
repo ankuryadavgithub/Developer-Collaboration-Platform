@@ -17,6 +17,7 @@ import OrganizationDashboard from "./pages/OrganizationDashboard";
 import OrganizationMembers from "./pages/OrganizationMembers";
 import Workspaces from "./pages/Workspaces";
 import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
+import Wiki from "./pages/Wiki";
 
 import Invitations from "./pages/Invitations";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
@@ -95,13 +96,13 @@ function AppRoutes() {
           }
         />
 
-        <Route 
-          path="/profile" 
+        <Route
+          path="/profile"
           element={
             <ProtectedRoute>
               <UserProfile />
-            </ProtectedRoute>          
-          } 
+            </ProtectedRoute>
+          }
         />
 
         <Route
@@ -158,6 +159,15 @@ function AppRoutes() {
           }
         />
 
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/wiki"
+          element={
+            <ProtectedRoute>
+              <Wiki />
+            </ProtectedRoute>
+          }
+        />
+
         {/* Organization Routes Protected by Auth */}
         <Route
           path="/organization"
@@ -176,8 +186,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
-
 
         <Route
           path="/organizations/:orgId/workspaces/create"

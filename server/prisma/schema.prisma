@@ -112,6 +112,7 @@ model User {
   createdTasks          Task[]       @relation("CreatedTasks")
   activities            Activity[]
   notifications         Notification[]
+  createdWikiPages      WikiPage[]
 }
 
 model Organization {
@@ -175,6 +176,7 @@ model Workspace {
   sprints               Sprint[]
   tasks                 Task[]
   activities            Activity[]
+  wikiPages             WikiPage[]
 }
 
 model Repository {
@@ -318,4 +320,25 @@ model Notification {
 
   @@index([userId, isRead]) 
   @@index([createdAt])
+}
+
+model WikiPage {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  title       String
+  content     String?   
+  
+  // --- New Sync Fields ---
+  githubPath    String?   // The filename on GitHub (e.g. "Home.md")
+  lastSyncedAt  DateTime? // Timestamp of last push/fetch
+  isDraft       Boolean   @default(true) // True if local changes aren't pushed
+  
+  createdById Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation(fields: [createdById], references: [id])
+
+  @@unique([workspaceId, title])
 }

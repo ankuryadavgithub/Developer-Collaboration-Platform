@@ -20,7 +20,8 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "google-auth-library": "^10.9.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "simple-git": "^3.36.0"
   },
   "devDependencies": {
     "@types/node": "^26.1.1",
@@ -30,5 +31,4 @@
   "prisma": {
     "seed": "node prisma/seed.js"
   }
-
 }

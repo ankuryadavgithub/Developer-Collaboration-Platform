@@ -161,7 +161,7 @@ export const getPullRequests = async (req, res) => {
     const owner = repository.owner;
     const repo = repository.name;
 
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=5`, {
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls?state=open&sort=updated&direction=desc&per_page=50`, {
       headers: githubHeaders(githubToken),
     });
 
@@ -258,7 +258,32 @@ export const handleGithubWebhook = async (req, res) => {
       // The payload contains changes.field_value which maps to generic Option IDs.
       const { action, projects_v2_item } = payload;
       console.log(`[GitHub Webhook] Project V2 Item ${projects_v2_item.node_id} updated. action: ${action}`);
-    }
+    } else if (event === "pull_request") {
+        const { action, pull_request } = payload;
+        
+        // Scan PR title and body for Task IDs, e.g. "#12" or "Fixes #12"
+        const contentToScan = `${pull_request.title} ${pull_request.body || ""}`;
+        const matches = [...contentToScan.matchAll(/#(\d+)/g)];
+        const taskIds = matches.map(m => parseInt(m[1]));
+        
+        if (taskIds.length > 0) {
+          if (action === "closed" && pull_request.merged) {
+            // PR merged -> Automatically complete the task!
+            await prisma.task.updateMany({
+              where: { id: { in: taskIds } },
+              data: { status: "DONE" },
+            });
+            console.log(`[GitHub Webhook] PR Merged! Marked tasks [${taskIds.join(', ')}] as DONE.`);
+          } else if (action === "opened" || action === "reopened") {
+            // PR opened -> Automatically move task to In Progress
+            await prisma.task.updateMany({
+              where: { id: { in: taskIds } },
+              data: { status: "IN_PROGRESS" },
+            });
+            console.log(`[GitHub Webhook] PR ${action}. Marked tasks [${taskIds.join(', ')}] as IN_PROGRESS.`);
+          }
+        }
+      }
   } catch (error) {
     console.error("[GitHub Webhook Error]:", error);
   }
