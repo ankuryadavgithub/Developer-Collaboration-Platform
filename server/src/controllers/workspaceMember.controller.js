@@ -38,6 +38,8 @@ export const getAvailableOrgMembers = async (req, res) => {
     const orgId = parseInt(req.params.orgId);
     const workspaceId = req.workspace.id;
 
+    console.log("DEBUG getAvailableOrgMembers: orgId=", orgId, "workspaceId=", workspaceId);
+
     // Strict Rule Enforcement: Only find users who belong to the Org,
     // BUT whose userId does NOT exist in this specific Workspace's member list
     const availableMembers = await prisma.organizationMember.findMany({
