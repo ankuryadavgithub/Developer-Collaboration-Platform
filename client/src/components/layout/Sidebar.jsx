@@ -29,7 +29,6 @@ function Sidebar({ isOpen, setIsOpen }) {
 
     return (
       <>
-
         {isOpen && (
           <div
             className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -121,7 +120,11 @@ function Sidebar({ isOpen, setIsOpen }) {
                 </span>
               </div>
               <div
-                onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/pull-requests`)}
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/pull-requests`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
                 <GitPullRequestArrow
@@ -135,7 +138,11 @@ function Sidebar({ isOpen, setIsOpen }) {
                 </span>
               </div>
               <div
-                onClick={() => alert("Coming Soon!")}
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/commits`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
                 <GitCommitHorizontalIcon

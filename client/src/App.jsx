@@ -18,6 +18,7 @@ import OrganizationMembers from "./pages/OrganizationMembers";
 import Workspaces from "./pages/Workspaces";
 import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
 import Wiki from "./pages/Wiki";
+import Commits from "./pages/Commits";
 
 import Invitations from "./pages/Invitations";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
@@ -232,6 +233,15 @@ function AppRoutes() {
           }
         />
 
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/commits"
+          element={
+            <ProtectedRoute>
+              <Commits />
+            </ProtectedRoute>
+          }
+        />
+        
         <Route element={<ProtectedAdminRoute />}>
           <Route path="/admin" element={<AdminDashboard />} />
         </Route>

@@ -288,3 +288,95 @@ export const handleGithubWebhook = async (req, res) => {
     console.error("[GitHub Webhook Error]:", error);
   }
 };
+
+// @desc    Get latest commits from the connected GitHub repository
+// @route   GET /api/organizations/:orgId/workspaces/:workspaceId/github/commits
+// 1. UPDATED getCommits function
+export const getCommits = async (req, res) => {
+  try {
+    const githubToken = await getGithubToken(req, res);
+    if (!githubToken) return;
+
+    const repository = await prisma.repository.findUnique({ 
+      where: { workspaceId: req.workspace.id } 
+    });
+    
+    if (!repository) {
+      return res.status(404).json({ success: false, message: "No GitHub repository linked." });
+    }
+
+    const { owner, name } = repository;
+    
+    // NEW: Look for a branch in the URL query
+    const branch = req.query.branch;
+    const branchQuery = branch ? `&sha=${branch}` : '';
+
+    // NEW: I also increased per_page to 100!
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/commits?per_page=100${branchQuery}`, 
+      { headers: githubHeaders(githubToken) }
+    );
+
+    const commitsData = await response.json();
+    if (!response.ok) return res.status(response.status).json({ success: false, message: commitsData.message });
+
+    const formattedCommits = commitsData.map((commit) => ({
+      sha: commit.sha,
+      shortSha: commit.sha.substring(0, 7),
+      message: commit.commit.message.split('\n')[0],
+      author: commit.commit.author.name,
+      avatar: commit.author?.avatar_url || `https://ui-avatars.com/api/?name=${commit.commit.author.name}`,
+      url: commit.html_url,
+      date: commit.commit.author.date,
+    }));
+
+    return res.status(200).json({ success: true, data: formattedCommits });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not fetch commits." });
+  }
+};
+
+// 2. BRAND NEW function to get the list of branches
+// BRAND NEW function to get the list of branches AND the default branch
+export const getBranches = async (req, res) => {
+  try {
+    const githubToken = await getGithubToken(req, res);
+    if (!githubToken) return;
+
+    const repository = await prisma.repository.findUnique({ 
+      where: { workspaceId: req.workspace.id } 
+    });
+    
+    if (!repository) return res.status(404).json({ success: false, message: "No repo linked." });
+
+    // 1. Ask GitHub for the Repository Details (this contains the true default branch)
+    const repoResponse = await fetch(
+      `https://api.github.com/repos/${repository.owner}/${repository.name}`, 
+      { headers: githubHeaders(githubToken) }
+    );
+    const repoData = await repoResponse.json();
+    const actualDefaultBranch = repoData.default_branch || "main"; // Fallback just in case
+
+    // 2. Ask GitHub for the list of all branches
+    const branchesResponse = await fetch(
+      `https://api.github.com/repos/${repository.owner}/${repository.name}/branches`, 
+      { headers: githubHeaders(githubToken) }
+    );
+    const branchesData = await branchesResponse.json();
+    
+    if (!branchesResponse.ok) return res.status(branchesResponse.status).json({ success: false, message: branchesData.message });
+
+    // Format the response to send BOTH pieces of information to the frontend
+    const formattedBranches = branchesData.map(b => b.name);
+    
+    return res.status(200).json({ 
+      success: true, 
+      data: {
+        branches: formattedBranches,
+        defaultBranch: actualDefaultBranch
+      } 
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not fetch branches." });
+  }
+};

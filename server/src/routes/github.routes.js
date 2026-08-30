@@ -7,6 +7,8 @@ import {
   getPullRequests,
   getAccessibleRepositories,
   handleGithubWebhook,
+  getCommits,
+  getBranches,
 } from "../controllers/github.controller.js";
 
 const router = express.Router({ mergeParams: true });
@@ -25,6 +27,10 @@ router.get(
   requireWorkspaceMember,
   getPullRequests,
 );
+
+router.get("/commits", requireAuth, requireWorkspaceMember, getCommits);
+
+router.get("/branches", requireAuth, requireWorkspaceMember, getBranches);
 
 // Global user routes
 router.get("/repositories", requireAuth, getAccessibleRepositories);
