@@ -90,7 +90,7 @@ const Invitations = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-[#111827] to-indigo-950">
+    <div className="flex h-screen overflow-hidden bg-linear-to-br from-slate-950 via-[#111827] to-indigo-950">
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} user={user} />
       <main className="flex-1 p-4 md:p-8 w-full h-full overflow-y-auto min-w-0">
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />

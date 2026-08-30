@@ -171,7 +171,7 @@ const Commits = () => {
                     key={commit.sha}
                     className="relative pl-8 md:pl-12 group"
                   >
-                    <div className="absolute -left-[21px] top-4 bg-[#0a0c10] rounded-full w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 z-10 p-1 border border-slate-700 group-hover:border-blue-500 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                    <div className="absolute-left-[21px] top-4 bg-[#0a0c10] rounded-full w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 z-10 p-1 border border-slate-700 group-hover:border-blue-500 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]">
                       <img
                         src={commit.avatar}
                         alt={commit.author}
