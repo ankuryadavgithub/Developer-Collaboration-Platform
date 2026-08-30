@@ -22,9 +22,9 @@ const getAllMarkdownFiles = (dir, fileList = []) => {
   return fileList;
 };
 
-// Helper: Sanitize title for safe file system usage
+// Helper: Sanitize title for safe file system usage, allowing forward slashes for folders
 const sanitizeFilename = (title) => {
-  return title.replace(/[\/\\?%*:|"<>]/g, '-');
+  return title.replace(/[\\?%*:|"<>]/g, '-');
 };
 
 // Get all wiki pages for a workspace (lightweight list)
@@ -40,6 +40,7 @@ export const getWikiPages = async (req, res) => {
         updatedAt: true,
         createdById: true,
         isDraft: true,
+        isStarred: true,
         lastSyncedAt: true
       },
       orderBy: { updatedAt: "desc" },
@@ -77,7 +78,7 @@ export const getWikiPage = async (req, res) => {
 export const createWikiPage = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { title, content } = req.body;
+    const { title, content, isStarred } = req.body;
 
     if (!title) {
       return res.status(400).json({ success: false, message: "Title is required" });
@@ -100,6 +101,7 @@ export const createWikiPage = async (req, res) => {
       data: {
         title,
         content: content || "",
+        isStarred: isStarred || false,
         workspaceId: parseInt(workspaceId),
         createdById: req.user.id,
         isDraft: true // Marked as draft because it hasn't been pushed yet
@@ -117,7 +119,7 @@ export const createWikiPage = async (req, res) => {
 export const updateWikiPage = async (req, res) => {
   try {
     const { workspaceId, pageId } = req.params;
-    const { title, content } = req.body;
+    const { title, content, isStarred } = req.body;
 
     const page = await prisma.wikiPage.findFirst({
       where: { id: parseInt(pageId), workspaceId: parseInt(workspaceId) },
@@ -132,6 +134,7 @@ export const updateWikiPage = async (req, res) => {
       data: {
         title: title || page.title,
         content: content !== undefined ? content : page.content,
+        isStarred: isStarred !== undefined ? isStarred : page.isStarred,
         isDraft: true // Marked as draft upon editing
       },
     });

@@ -332,6 +332,7 @@ model WikiPage {
   githubPath    String?   // The filename on GitHub (e.g. "Home.md")
   lastSyncedAt  DateTime? // Timestamp of last push/fetch
   isDraft       Boolean   @default(true) // True if local changes aren't pushed
+  isStarred     Boolean   @default(false) // True if the page is favorited/pinned
   
   createdById Int
   createdAt   DateTime  @default(now())
