@@ -6,14 +6,16 @@ const prisma = new PrismaClient();
 export const searchUsersToInvite = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
+    if (isNaN(orgId)) return res.status(400).json({ success: false, message: "Invalid Organization ID." });
+
     const searchQuery = req.query.search || "";
 
-    if (searchQuery.length < 3) {
+    if (typeof searchQuery !== "string" || searchQuery.trim().length < 3) {
       return res
         .status(400)
         .json({
           success: false,
-          message: "Search query must be at least 3 characters.",
+          message: "Search query must be a string of at least 3 characters.",
         });
     }
 
@@ -21,8 +23,8 @@ export const searchUsersToInvite = async (req, res) => {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { username: { contains: searchQuery, mode: "insensitive" } },
-          { email: { contains: searchQuery, mode: "insensitive" } },
+          { username: { contains: searchQuery.trim(), mode: "insensitive" } },
+          { email: { contains: searchQuery.trim(), mode: "insensitive" } },
         ],
         NOT: {
           OR: [
@@ -53,12 +55,14 @@ export const searchUsersToInvite = async (req, res) => {
 export const createInvitation = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
+    if (isNaN(orgId)) return res.status(400).json({ success: false, message: "Invalid Organization ID." });
+
     const { userId, role } = req.body;
 
-    if (!userId)
+    if (!userId || typeof userId !== "number")
       return res
         .status(400)
-        .json({ success: false, message: "User ID is required." });
+        .json({ success: false, message: "A valid numeric User ID is required." });
 
     const invitedUser = await prisma.user.findUnique({ where: { id: userId } });
     if (!invitedUser)
@@ -137,7 +141,7 @@ export const createInvitation = async (req, res) => {
     console.error("Create invitation error:", error);
     return res
       .status(500)
-      .json({ success: false, message: error.message || "Internal server error" });
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -165,6 +169,7 @@ export const getMyInvitations = async (req, res) => {
 export const acceptInvitation = async (req, res) => {
   try {
     const invitationId = parseInt(req.params.invitationId);
+    if (isNaN(invitationId)) return res.status(400).json({ success: false, message: "Invalid Invitation ID." });
 
     // Use a transaction! If adding the member fails, the invite won't be marked accepted.
     await prisma.$transaction(async (tx) => {
@@ -225,11 +230,12 @@ export const acceptInvitation = async (req, res) => {
       .status(200)
       .json({ success: true, message: "Invitation accepted!" });
   } catch (error) {
+    const isCustomError = error.message === "Invalid or expired invitation" || error.message === "This invitation has expired.";
     return res
       .status(400)
       .json({
         success: false,
-        message: error.message || "Failed to accept invitation",
+        message: isCustomError ? error.message : "Failed to accept invitation",
       });
   }
 };
@@ -239,6 +245,7 @@ export const acceptInvitation = async (req, res) => {
 export const rejectInvitation = async (req, res) => {
   try {
     const invitationId = parseInt(req.params.invitationId);
+    if (isNaN(invitationId)) return res.status(400).json({ success: false, message: "Invalid Invitation ID." });
 
     const invite = await prisma.invitation.findUnique({
       where: { id: invitationId },
@@ -291,6 +298,8 @@ export const rejectInvitation = async (req, res) => {
 export const getOrgInvitations = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
+    if (isNaN(orgId)) return res.status(400).json({ success: false, message: "Invalid Organization ID." });
+
     const invitations = await prisma.invitation.findMany({
       where: { organizationId: orgId },
       include: {
@@ -311,6 +320,10 @@ export const cancelInvitation = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
     const invitationId = parseInt(req.params.invitationId);
+    
+    if (isNaN(orgId) || isNaN(invitationId)) {
+      return res.status(400).json({ success: false, message: "Invalid Organization ID or Invitation ID." });
+    }
 
     const invite = await prisma.invitation.findUnique({
       where: { id: invitationId }

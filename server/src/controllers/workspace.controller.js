@@ -25,10 +25,23 @@ export const createWorkspace = async (req, res) => {
       });
     }
 
+    if (typeof name !== "string") {
+      return res.status(400).json({ success: false, message: "Workspace name must be a valid string." });
+    }
+    
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0 || trimmedName.length > 100) {
+      return res.status(400).json({ success: false, message: "Workspace name must be between 1 and 100 characters." });
+    }
+    
+    if (description && typeof description !== "string") {
+      return res.status(400).json({ success: false, message: "Description must be a string." });
+    }
+
     const existingWorkspace = await prisma.workspace.findFirst({
       where: {
         organizationId: orgId,
-        name: name,
+        name: trimmedName,
       },
     });
 
@@ -121,8 +134,8 @@ export const createWorkspace = async (req, res) => {
       const workspace = await tx.workspace.create({
         data: {
           organizationId: orgId,
-          name,
-          description,
+          name: trimmedName,
+          description: description ? description.trim() : null,
           createdById: req.user.id,
         },
       });
@@ -277,13 +290,20 @@ export const updateWorkspace = async (req, res) => {
     const orgId = req.workspace.organizationId;
     const oldName = req.workspace.name; // to show in notification
 
-    if (!name || name.trim() === "") {
+    if (!name || typeof name !== "string" || name.trim() === "") {
       return res
         .status(400)
-        .json({ success: false, message: "Workspace name is required." });
+        .json({ success: false, message: "Workspace name is required and must be a string." });
     }
 
     name = name.trim();
+    if (name.length > 100) {
+      return res.status(400).json({ success: false, message: "Workspace name must be 100 characters or less." });
+    }
+
+    if (description && typeof description !== "string") {
+      return res.status(400).json({ success: false, message: "Description must be a string." });
+    }
     description = description ? description.trim() : "";
 
     // Uniqueness check: Does another workspace in this org have this name?
@@ -373,7 +393,7 @@ export const updateRepository = async (req, res) => {
     const workspaceId = req.workspace.id;
     const { githubUrl } = req.body;
 
-    if (!githubUrl || !githubUrl.includes("github.com/")) {
+    if (!githubUrl || typeof githubUrl !== "string" || !githubUrl.includes("github.com/")) {
       return res.status(400).json({ success: false, message: "Valid GitHub repository URL is required." });
     }
 

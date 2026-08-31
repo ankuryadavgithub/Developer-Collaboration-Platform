@@ -68,11 +68,11 @@ const Commits = () => {
 
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
-      <main className="flex-1 p-4 md:p-8 w-full h-full overflow-y-auto min-w-0 relative z-10">
+      <main className="flex-1 p-4 md:p-8 w-full h-full overflow-y-auto overflow-x-hidden min-w-0 relative z-10">
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
         <div className="max-w-5xl mx-auto mt-6 pb-12">
-          <div className="bg-[#1c1f2e]/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6 sm:p-8 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-2xl">
+          <div className="bg-[#1c1f2e]/60 backdrop-blur-xl border border-white/5 rounded-2xl p-6 sm:p-8 mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 shadow-2xl">
             <div className="flex gap-4 items-center">
               <div className="bg-blue-500/20 p-3 rounded-xl border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
                 {/* Changed to GitBranch */}
@@ -88,7 +88,7 @@ const Commits = () => {
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto">
               <div className="relative w-full sm:w-56 group">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <GitBranch
@@ -171,7 +171,7 @@ const Commits = () => {
                     key={commit.sha}
                     className="relative pl-8 md:pl-12 group"
                   >
-                    <div className="absolute-left-[21px] top-4 bg-[#0a0c10] rounded-full w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 z-10 p-1 border border-slate-700 group-hover:border-blue-500 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                    <div className="absolute -left-[21px] top-4 bg-[#0a0c10] rounded-full w-10 h-10 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 z-10 p-1 border border-slate-700 group-hover:border-blue-500 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.5)]">
                       <img
                         src={commit.avatar}
                         alt={commit.author}
@@ -214,7 +214,7 @@ const Commits = () => {
                           href={commit.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex items-center gap-2 font-mono text-sm bg-blue-500/10 text-blue-400 px-4 py-2 rounded-xl hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 group/btn shrink-0"
+                          className="flex items-center justify-center lg:justify-start w-full lg:w-auto gap-2 font-mono text-sm bg-blue-500/10 text-blue-400 px-4 py-3 lg:py-2 rounded-xl hover:bg-blue-500 hover:text-white transition-all border border-blue-500/20 group/btn shrink-0 mt-4 lg:mt-0"
                         >
                           <GitCommit size={16} />
                           {commit.shortSha}

@@ -8,7 +8,7 @@ const prisma = new PrismaClient();
 export const createTask = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
-    const {
+    let {
       projectId,
       sprintId,
       title,
@@ -19,13 +19,35 @@ export const createTask = async (req, res) => {
       storyPoints,
     } = req.body;
 
-    if (!projectId || !title)
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Project ID and Title are required.",
-        });
+    if (!projectId || !title) {
+      return res.status(400).json({ success: false, message: "Project ID and Title are required." });
+    }
+
+    if (isNaN(parseInt(projectId))) {
+      return res.status(400).json({ success: false, message: "Invalid Project ID." });
+    }
+
+    if (typeof title !== "string") {
+      return res.status(400).json({ success: false, message: "Title must be a string." });
+    }
+    title = title.trim();
+    if (title.length === 0 || title.length > 200) {
+      return res.status(400).json({ success: false, message: "Title must be between 1 and 200 characters." });
+    }
+
+    if (description && typeof description !== "string") {
+      return res.status(400).json({ success: false, message: "Description must be a string." });
+    }
+    
+    if (assigneeId && isNaN(parseInt(assigneeId))) {
+      return res.status(400).json({ success: false, message: "Invalid Assignee ID." });
+    }
+    if (sprintId && isNaN(parseInt(sprintId))) {
+      return res.status(400).json({ success: false, message: "Invalid Sprint ID." });
+    }
+    if (storyPoints !== undefined && isNaN(parseInt(storyPoints))) {
+      return res.status(400).json({ success: false, message: "Invalid Story Points." });
+    }
 
     // Enforce data isolation: Project MUST belong to this Workspace
     const project = await prisma.project.findUnique({
@@ -171,14 +193,25 @@ export const getTasks = async (req, res) => {
     const { projectId, sprintId, status, assigneeId } = req.query;
 
     const where = { workspaceId };
-    if (projectId) where.projectId = parseInt(projectId);
+    
+    if (projectId) {
+      if (isNaN(parseInt(projectId))) return res.status(400).json({ success: false, message: "Invalid Project ID." });
+      where.projectId = parseInt(projectId);
+    }
+    
     if (sprintId === "null") {
       where.sprintId = null;
-    }else if (sprintId) {
+    } else if (sprintId) {
+      if (isNaN(parseInt(sprintId))) return res.status(400).json({ success: false, message: "Invalid Sprint ID." });
       where.sprintId = parseInt(sprintId);
     }
+    
     if (status) where.status = status;
-    if (assigneeId) where.assigneeId = parseInt(assigneeId);
+    
+    if (assigneeId) {
+      if (isNaN(parseInt(assigneeId))) return res.status(400).json({ success: false, message: "Invalid Assignee ID." });
+      where.assigneeId = parseInt(assigneeId);
+    }
 
     const tasks = await prisma.task.findMany({
       where,
@@ -204,7 +237,21 @@ export const updateTask = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const taskId = parseInt(req.params.taskId);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ success: false, message: "Invalid Task ID." });
+    }
+    
     const { status, priority, assigneeId, sprintId, storyPoints } = req.body;
+
+    if (assigneeId && assigneeId !== "null" && isNaN(parseInt(assigneeId))) {
+      return res.status(400).json({ success: false, message: "Invalid Assignee ID." });
+    }
+    if (sprintId && sprintId !== "null" && isNaN(parseInt(sprintId))) {
+      return res.status(400).json({ success: false, message: "Invalid Sprint ID." });
+    }
+    if (storyPoints !== undefined && isNaN(parseInt(storyPoints))) {
+      return res.status(400).json({ success: false, message: "Invalid Story Points." });
+    }
 
     const existing = await prisma.task.findFirst({
       where: { id: taskId, workspaceId },

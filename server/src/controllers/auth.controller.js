@@ -24,12 +24,24 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    if (username.length < 3 || username.includes(" ")) {
+    if (typeof username !== "string" || typeof email !== "string" || typeof password !== "string" || typeof jobTitle !== "string") {
+      return res.status(400).json({ success: false, message: "Invalid input types." });
+    }
+
+    if (username.length < 3 || username.length > 50 || username.includes(" ")) {
       return res.status(400).json({
         success: false,
         message:
-          "Username must be at least 3 characters and contain no spaces.",
+          "Username must be between 3 and 50 characters and contain no spaces.",
       });
+    }
+
+    if (email.length > 100) {
+      return res.status(400).json({ success: false, message: "Email is too long." });
+    }
+
+    if (password.length > 72) {
+      return res.status(400).json({ success: false, message: "Password must be 72 characters or less." });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,10 +132,14 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    if (!turnstileToken) {
+    if (typeof username !== "string" || typeof password !== "string") {
+      return res.status(400).json({ success: false, message: "Invalid input types." });
+    }
+
+    if (!turnstileToken || typeof turnstileToken !== "string") {
       return res.status(400).json({
         success: false,
-        message: "CAPTCHA token is missing.",
+        message: "CAPTCHA token is missing or invalid.",
       });
     }
 

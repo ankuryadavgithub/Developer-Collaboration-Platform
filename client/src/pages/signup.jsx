@@ -70,6 +70,7 @@ function Signup() {
 
       alert("Account created Successfully");
       console.log(data);
+      goTo("/login");
     }
 
     catch (err){

@@ -171,9 +171,9 @@ export const getPullRequests = async (req, res) => {
     const data = pullRequests.map((pullRequest) => ({
       id: pullRequest.number,
       title: pullRequest.title,
-      author: pullRequest.user.login,
-      comments: pullRequest.comments,
-      status: pullRequest.draft ? "Draft" : pullRequest.requested_reviewers.length > 0 ? "Review" : "Open",
+      author: pullRequest.user?.login || "Unknown",
+      comments: pullRequest.comments || 0,
+      status: pullRequest.draft ? "Draft" : pullRequest.requested_reviewers?.length > 0 ? "Review" : "Open",
       url: pullRequest.html_url,
       createdAt: pullRequest.created_at,
       updatedAt: pullRequest.updated_at,
@@ -259,8 +259,23 @@ export const handleGithubWebhook = async (req, res) => {
       const { action, projects_v2_item } = payload;
       console.log(`[GitHub Webhook] Project V2 Item ${projects_v2_item.node_id} updated. action: ${action}`);
     } else if (event === "pull_request") {
-        const { action, pull_request } = payload;
+        const { action, pull_request, repository: ghRepo } = payload;
         
+        // HUGE SECURITY FIX: Look up the workspace associated with this GitHub repository.
+        // Without this, an attacker sending a webhook payload for "#1" could modify Task ID 1 
+        // in ANY workspace on the platform!
+        const linkedRepo = await prisma.repository.findFirst({
+          where: {
+            owner: ghRepo?.owner?.login,
+            name: ghRepo?.name
+          }
+        });
+
+        if (!linkedRepo) {
+          console.log(`[GitHub Webhook] Ignored PR event. Repository ${ghRepo?.full_name} is not linked to any workspace.`);
+          return;
+        }
+
         // Scan PR title and body for Task IDs, e.g. "#12" or "Fixes #12"
         const contentToScan = `${pull_request.title} ${pull_request.body || ""}`;
         const matches = [...contentToScan.matchAll(/#(\d+)/g)];
@@ -270,14 +285,16 @@ export const handleGithubWebhook = async (req, res) => {
           if (action === "closed" && pull_request.merged) {
             // PR merged -> Automatically complete the task!
             await prisma.task.updateMany({
-              where: { id: { in: taskIds } },
+              // SECURITY ISOLATION: Ensure the tasks belong to THIS workspace!
+              where: { id: { in: taskIds }, workspaceId: linkedRepo.workspaceId },
               data: { status: "DONE" },
             });
             console.log(`[GitHub Webhook] PR Merged! Marked tasks [${taskIds.join(', ')}] as DONE.`);
           } else if (action === "opened" || action === "reopened") {
             // PR opened -> Automatically move task to In Progress
             await prisma.task.updateMany({
-              where: { id: { in: taskIds } },
+              // SECURITY ISOLATION: Ensure the tasks belong to THIS workspace!
+              where: { id: { in: taskIds }, workspaceId: linkedRepo.workspaceId },
               data: { status: "IN_PROGRESS" },
             });
             console.log(`[GitHub Webhook] PR ${action}. Marked tasks [${taskIds.join(', ')}] as IN_PROGRESS.`);

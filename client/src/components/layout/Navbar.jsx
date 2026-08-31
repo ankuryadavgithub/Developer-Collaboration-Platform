@@ -13,7 +13,12 @@ const Navbar = ({ toggleSidebar, githubData }) => {
   const [imageFailed, setImageFailed] = useState(false);
   
   const storedUser = localStorage.getItem("user");
-  const user = storedUser ? JSON.parse(storedUser) : null;
+  let user = null;
+  try {
+    user = storedUser ? JSON.parse(storedUser) : null;
+  } catch (e) {
+    console.error("Failed to parse user from local storage");
+  }
 
   const username = user?.username || "User";
   const avatar = user?.avatar;

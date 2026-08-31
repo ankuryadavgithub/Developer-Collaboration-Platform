@@ -26,18 +26,33 @@ const calculateSprintProgress = (tasks) => {
 export const createSprint = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
-    const { name, goal, startDate, endDate } = req.body;
+    let { name, goal, startDate, endDate } = req.body;
 
-    if (!name)
-      return res
-        .status(400)
-        .json({ success: false, message: "Sprint name is required" });
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ success: false, message: "A valid sprint name is required" });
+    }
+
+    name = name.trim();
+    if (name.length === 0 || name.length > 100) {
+      return res.status(400).json({ success: false, message: "Sprint name must be between 1 and 100 characters." });
+    }
+
+    let trimmedGoal = null;
+    if (goal) {
+      if (typeof goal !== "string") {
+        return res.status(400).json({ success: false, message: "Goal must be a string." });
+      }
+      trimmedGoal = goal.trim();
+      if (trimmedGoal.length > 1000) {
+        return res.status(400).json({ success: false, message: "Goal must be 1000 characters or less." });
+      }
+    }
 
     const sprint = await prisma.sprint.create({
       data: {
         workspaceId,
         name,
-        goal,
+        goal: trimmedGoal,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
         createdById: req.user.id,
@@ -94,7 +109,23 @@ export const updateSprint = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const sprintId = parseInt(req.params.sprintId);
-    const { status, name, goal, startDate, endDate } = req.body;
+    if (isNaN(sprintId)) {
+      return res.status(400).json({ success: false, message: "Invalid Sprint ID." });
+    }
+
+    let { status, name, goal, startDate, endDate } = req.body;
+
+    if (name !== undefined) {
+      if (typeof name !== "string") return res.status(400).json({ success: false, message: "Name must be a string." });
+      name = name.trim();
+      if (name.length === 0 || name.length > 100) return res.status(400).json({ success: false, message: "Sprint name must be between 1 and 100 characters." });
+    }
+
+    if (goal !== undefined && goal !== null) {
+      if (typeof goal !== "string") return res.status(400).json({ success: false, message: "Goal must be a string." });
+      goal = goal.trim();
+      if (goal.length > 1000) return res.status(400).json({ success: false, message: "Goal must be 1000 characters or less." });
+    }
 
     const existingSprint = await prisma.sprint.findUnique({
       where: { id: sprintId, workspaceId },
@@ -136,8 +167,8 @@ export const updateSprint = async (req, res) => {
       where: { id: sprintId, workspaceId },
       data: {
         status: status || existingSprint.status,
-        name: name || existingSprint.name,
-        goal: goal || existingSprint.goal,
+        name: name !== undefined ? name : existingSprint.name,
+        goal: goal !== undefined ? goal : existingSprint.goal,
         startDate: start,
         endDate: end
       },

@@ -21,8 +21,7 @@ function Sidebar({ isOpen, setIsOpen }) {
     }
   }, [orgId, workspaceId]);
     
-  // Check if the user is allowed to manage sprints (Owner, Admin, or Manager)
-  const canAccessSprints = currentOrg?.myRole !== "MEMBER";
+  // Removed canAccessSprints as sprints should be visible to all members
   
   const userStr = localStorage.getItem("user");
   const user = userStr ? JSON.parse(userStr) : null;
@@ -36,7 +35,7 @@ function Sidebar({ isOpen, setIsOpen }) {
           />
         )}
         <div
-          className={`flex flex-col ${`isCollapsed ? "w-12":"w-[240px]"`} h-full bg-[#0f111a] text-[#8b92a5] border-r border-[#ffffff]/10 fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+          className={`flex flex-col ${isCollapsed ? "w-16" : "w-[240px]"} h-full bg-[#0f111a] text-[#8b92a5] border-r border-[#ffffff]/10 fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
           <div className="flex items-center justify-between h-16 p-4 text-white font-bold">
             {!isCollapsed && <span className="whitespace nowrap">Devhub</span>}
@@ -155,26 +154,24 @@ function Sidebar({ isOpen, setIsOpen }) {
                   Commits
                 </span>
               </div>
-              {canAccessSprints && (
-                <div
-                  onClick={() =>
-                    navigate(
-                      `/organizations/${orgId}/workspaces/${workspaceId}/sprints`,
-                    )
-                  }
-                  className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              <div
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/sprints`,
+                  )
+                }
+                className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
+              >
+                <CircleArrowDown
+                  size={18}
+                  className="text-slate-300 shrink-0"
+                />
+                <span
+                  className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
                 >
-                  <CircleArrowDown
-                    size={18}
-                    className="text-slate-300 shrink-0"
-                  />
-                  <span
-                    className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
-                  >
-                    Sprints
-                  </span>
-                </div>
-              )}
+                  Sprints
+                </span>
+              </div>
               <div
                 onClick={() => alert("Coming Soon!")}
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"

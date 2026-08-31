@@ -15,12 +15,30 @@ const calculateProgress = (tasks) => {
 export const createProject = async (req, res) => {
   try {
     const workspaceId = req.workspace.id; // From workspace.middleware
-    const { name, description } = req.body;
+    let { name, description } = req.body;
 
-    if (!name)
-      return res
-        .status(400)
-        .json({ success: false, message: "Project name is required" });
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ success: false, message: "A valid project name is required." });
+    }
+
+    name = name.trim();
+    if (name.length === 0) {
+      return res.status(400).json({ success: false, message: "Project name cannot be empty." });
+    }
+    if (name.length > 100) {
+      return res.status(400).json({ success: false, message: "Project name must be 100 characters or less." });
+    }
+
+    let trimmedDescription = null;
+    if (description) {
+      if (typeof description !== "string") {
+        return res.status(400).json({ success: false, message: "Description must be a string." });
+      }
+      trimmedDescription = description.trim();
+      if (trimmedDescription.length > 2000) {
+        return res.status(400).json({ success: false, message: "Description must be 2000 characters or less." });
+      }
+    }
 
     const existing = await prisma.project.findUnique({
       where: { workspaceId_name: { workspaceId, name } },
@@ -63,7 +81,7 @@ export const createProject = async (req, res) => {
       data: {
         workspaceId,
         name,
-        description,
+        description: trimmedDescription,
         createdById: req.user.id,
         githubProjectId,
       },
@@ -123,6 +141,10 @@ export const getProjectDetails = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const projectId = parseInt(req.params.projectId);
+    
+    if (isNaN(projectId)) {
+      return res.status(400).json({ success: false, message: "Invalid Project ID." });
+    }
 
     const project = await prisma.project.findFirst({
       where: { id: projectId, workspaceId }, // Ensures data isolation!

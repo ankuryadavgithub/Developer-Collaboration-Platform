@@ -77,10 +77,14 @@ export const addWorkspaceMember = async (req, res) => {
     const workspaceId = req.workspace.id;
     const { userId, role } = req.body;
 
-    if (!userId)
+    if (!userId || isNaN(parseInt(userId)))
       return res
         .status(400)
-        .json({ success: false, message: "User ID is required." });
+        .json({ success: false, message: "A valid User ID is required." });
+        
+    if (role && typeof role !== "string") {
+      return res.status(400).json({ success: false, message: "Role must be a string." });
+    }
 
     // Double-check they are actually in the Organization
     const orgMember = await prisma.organizationMember.findUnique({
@@ -147,10 +151,14 @@ export const updateWorkspaceMemberRole = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const targetUserId = parseInt(req.params.userId);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ success: false, message: "Invalid User ID." });
+    }
+    
     const { role } = req.body;
 
-    if (!role) {
-      return res.status(400).json({ success: false, message: "Role is required." });
+    if (!role || typeof role !== "string") {
+      return res.status(400).json({ success: false, message: "A valid role is required." });
     }
 
     if (targetUserId === req.workspace.createdById && role !== "WORKSPACE_ADMIN") {
@@ -180,6 +188,9 @@ export const removeWorkspaceMember = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const targetUserId = parseInt(req.params.userId);
+    if (isNaN(targetUserId)) {
+      return res.status(400).json({ success: false, message: "Invalid User ID." });
+    }
 
     // Prevent deleting the workspace creator/yourself if needed, or just let Org Admins handle it
     if (targetUserId === req.workspace.createdById) {

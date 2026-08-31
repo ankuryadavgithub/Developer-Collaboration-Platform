@@ -5,18 +5,47 @@ const prisma = new PrismaClient();
 // @route   POST /api/organizations
 export const createOrganization = async (req, res) => {
   const { name, description } = req.body;
-  if (!name)
-    return res
-      .status(400)
-      .json({ success: false, message: "Organization name is required." });
+
+  if (!name || typeof name !== "string") {
+    return res.status(400).json({ success: false, message: "A valid organization name is required." });
+  }
+
+  const trimmedName = name.trim();
+  if (trimmedName.length === 0) {
+    return res.status(400).json({ success: false, message: "Organization name cannot be empty." });
+  }
+
+  if (trimmedName.length > 100) {
+    return res.status(400).json({ success: false, message: "Organization name must be 100 characters or less." });
+  }
+
+  let trimmedDescription = null;
+  if (description) {
+    if (typeof description !== "string") {
+      return res.status(400).json({ success: false, message: "Description must be a string." });
+    }
+    trimmedDescription = description.trim();
+    if (trimmedDescription.length > 1000) {
+      return res.status(400).json({ success: false, message: "Description must be 1000 characters or less." });
+    }
+  }
 
   try {
+    // Quota check: Limit to 5 organizations per user
+    const ownedOrgsCount = await prisma.organization.count({
+      where: { ownerId: req.user.id }
+    });
+
+    if (ownedOrgsCount >= 5) {
+      return res.status(403).json({ success: false, message: "You have reached the maximum limit of 5 organizations." });
+    }
+
     // We use a transaction because the Org and the Member record must be created together safely
     const newOrg = await prisma.$transaction(async (tx) => {
       const org = await tx.organization.create({
         data: {
-          name,
-          description,
+          name: trimmedName,
+          description: trimmedDescription,
           ownerId: req.user.id,
         },
       });
@@ -100,11 +129,34 @@ export const getOrganizationById = async (req, res) => {
 export const updateOrganization = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
-    const { name, description } = req.body;
+    let { name, description } = req.body;
+
+    if (!name || typeof name !== "string") {
+      return res.status(400).json({ success: false, message: "A valid organization name is required." });
+    }
+
+    name = name.trim();
+    if (name.length === 0) {
+      return res.status(400).json({ success: false, message: "Organization name cannot be empty." });
+    }
+    if (name.length > 100) {
+      return res.status(400).json({ success: false, message: "Organization name must be 100 characters or less." });
+    }
+
+    let trimmedDescription = null;
+    if (description) {
+      if (typeof description !== "string") {
+        return res.status(400).json({ success: false, message: "Description must be a string." });
+      }
+      trimmedDescription = description.trim();
+      if (trimmedDescription.length > 1000) {
+        return res.status(400).json({ success: false, message: "Description must be 1000 characters or less." });
+      }
+    }
 
     const updatedOrg = await prisma.organization.update({
       where: { id: orgId },
-      data: { name, description },
+      data: { name, description: trimmedDescription },
     });
 
     return res
@@ -144,7 +196,16 @@ export const updateMemberRole = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
     const memberId = parseInt(req.params.memberId); // This is the OrganizationMember.id
+    
+    if (isNaN(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid Member ID." });
+    }
+
     const { newRole } = req.body;
+    
+    if (typeof newRole !== "string" || !["ADMIN", "MANAGER", "MEMBER"].includes(newRole)) {
+      return res.status(400).json({ success: false, message: "A valid new role is required." });
+    }
     
     // Only OWNER or ADMIN can hit this endpoint (enforced by our middleware)
     const myRole = req.orgRole;
@@ -175,6 +236,11 @@ export const removeMember = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
     const memberId = parseInt(req.params.memberId); 
+    
+    if (isNaN(memberId)) {
+      return res.status(400).json({ success: false, message: "Invalid Member ID." });
+    }
+
     const myRole = req.orgRole;
 
     const targetMember = await prisma.organizationMember.findUnique({ where: { id: memberId } });
@@ -195,6 +261,10 @@ export const transferOwnership = async (req, res) => {
   try {
     const orgId = parseInt(req.params.orgId);
     const { newOwnerUserId } = req.body;
+    
+    if (typeof newOwnerUserId !== "number") {
+      return res.status(400).json({ success: false, message: "A valid numeric newOwnerUserId is required." });
+    }
     
     // myRole is strictly OWNER (enforced by middleware)
     if (newOwnerUserId === req.user.id) return res.status(400).json({ success: false, message: "You are already the owner." });

@@ -382,10 +382,10 @@ const Wiki = () => {
       <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-        <div className="flex-1 flex overflow-hidden p-4 gap-4">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden p-2 sm:p-4 gap-4">
           
           {/* Navigation Sidebar (Left) */}
-          <div className="w-64 bg-[#1c1f2e] border border-slate-800 rounded-xl flex flex-col overflow-hidden shrink-0 shadow-lg">
+          <div className="w-full lg:w-64 bg-[#1c1f2e] border border-slate-800 rounded-xl flex flex-col overflow-hidden shrink-0 shadow-lg h-64 lg:h-auto">
             <div className="p-4 border-b border-slate-800 flex justify-between items-center">
               <h2 className="text-white font-semibold flex items-center gap-2">
                 <FileText size={18} className="text-indigo-400" />
@@ -472,11 +472,11 @@ const Wiki = () => {
           </div>
 
           {/* Main Editor Area (Middle) */}
-          <div className="flex-1 bg-[#1c1f2e] border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-lg relative">
+          <div className="flex-1 bg-[#1c1f2e] border border-slate-800 rounded-xl flex flex-col overflow-hidden shadow-lg relative min-h-[600px] lg:min-h-0">
             {activePageId ? (
               <>
                 {/* Top Navigation & Actions */}
-                <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-[#1c1f2e]">
+                <div className="px-4 sm:px-6 py-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#1c1f2e]">
                   <div className="text-sm text-slate-400 flex items-center gap-2">
                     <Folder size={14} />
                     <span>Workspace Wiki</span>
@@ -508,10 +508,10 @@ const Wiki = () => {
                 </div>
 
                 {/* Page Header */}
-                <div className="px-8 pt-8 pb-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3 w-3/4">
-                      <FileText size={28} className="text-indigo-400 shrink-0" />
+                <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                    <div className="flex items-center gap-3 w-full sm:w-3/4">
+                      <FileText size={24} className="sm:w-7 sm:h-7 text-indigo-400 shrink-0" />
                       <input 
                         type="text"
                         value={activePageTitle}
@@ -547,7 +547,7 @@ const Wiki = () => {
                     Add a description or context for this documentation page...
                   </div>
 
-                  <div className="flex items-center gap-3 text-sm text-slate-500">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-500">
                     <div className="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-white text-xs font-medium">
                       {activePage?.createdById ? "U" : "A"}
                     </div>
@@ -566,7 +566,7 @@ const Wiki = () => {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto px-8 pb-8 bg-[#0f111a] mx-4 mb-4 rounded-xl border border-slate-800 shadow-inner">
+                <div className="flex-1 overflow-y-auto px-4 sm:px-8 pb-8 bg-[#0f111a] mx-2 sm:mx-4 mb-2 sm:mb-4 rounded-xl border border-slate-800 shadow-inner">
                   {isPreview ? (
                     <div className="prose prose-invert prose-indigo max-w-none pt-6 pb-24">
                       <ReactMarkdown 
@@ -609,7 +609,7 @@ const Wiki = () => {
 
           {/* Right Sidebar (Table of Contents) */}
           {activePageId && isPreview && toc.length > 0 && (
-            <div className="w-64 bg-[#1c1f2e] border border-slate-800 rounded-xl flex flex-col overflow-hidden shrink-0 shadow-lg">
+            <div className="hidden xl:flex w-64 bg-[#1c1f2e] border border-slate-800 rounded-xl flex-col overflow-hidden shrink-0 shadow-lg">
               <div className="p-4 border-b border-slate-800">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                   On this page

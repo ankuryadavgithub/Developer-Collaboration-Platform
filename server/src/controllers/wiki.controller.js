@@ -31,6 +31,8 @@ const sanitizeFilename = (title) => {
 export const getWikiPages = async (req, res) => {
   try {
     const { workspaceId } = req.params;
+    if (isNaN(parseInt(workspaceId))) return res.status(400).json({ success: false, message: "Invalid Workspace ID." });
+    
     const pages = await prisma.wikiPage.findMany({
       where: { workspaceId: parseInt(workspaceId) },
       select: {
@@ -56,6 +58,9 @@ export const getWikiPages = async (req, res) => {
 export const getWikiPage = async (req, res) => {
   try {
     const { workspaceId, pageId } = req.params;
+    if (isNaN(parseInt(workspaceId))) return res.status(400).json({ success: false, message: "Invalid Workspace ID." });
+    if (isNaN(parseInt(pageId))) return res.status(400).json({ success: false, message: "Invalid Page ID." });
+    
     const page = await prisma.wikiPage.findFirst({
       where: {
         id: parseInt(pageId),
@@ -78,10 +83,20 @@ export const getWikiPage = async (req, res) => {
 export const createWikiPage = async (req, res) => {
   try {
     const { workspaceId } = req.params;
-    const { title, content, isStarred } = req.body;
+    if (isNaN(parseInt(workspaceId))) return res.status(400).json({ success: false, message: "Invalid Workspace ID." });
+    
+    let { title, content, isStarred } = req.body;
 
-    if (!title) {
-      return res.status(400).json({ success: false, message: "Title is required" });
+    if (!title || typeof title !== "string") {
+      return res.status(400).json({ success: false, message: "A valid title is required" });
+    }
+    title = title.trim();
+    if (title.length === 0 || title.length > 200) {
+      return res.status(400).json({ success: false, message: "Title must be between 1 and 200 characters" });
+    }
+    
+    if (content && typeof content !== "string") {
+      return res.status(400).json({ success: false, message: "Content must be a string" });
     }
 
     const existing = await prisma.wikiPage.findUnique({
@@ -119,7 +134,10 @@ export const createWikiPage = async (req, res) => {
 export const updateWikiPage = async (req, res) => {
   try {
     const { workspaceId, pageId } = req.params;
-    const { title, content, isStarred } = req.body;
+    if (isNaN(parseInt(workspaceId))) return res.status(400).json({ success: false, message: "Invalid Workspace ID." });
+    if (isNaN(parseInt(pageId))) return res.status(400).json({ success: false, message: "Invalid Page ID." });
+    
+    let { title, content, isStarred } = req.body;
 
     const page = await prisma.wikiPage.findFirst({
       where: { id: parseInt(pageId), workspaceId: parseInt(workspaceId) },
@@ -127,6 +145,16 @@ export const updateWikiPage = async (req, res) => {
 
     if (!page) {
       return res.status(404).json({ success: false, message: "Wiki page not found" });
+    }
+    
+    if (title !== undefined) {
+      if (typeof title !== "string") return res.status(400).json({ success: false, message: "Title must be a string" });
+      title = title.trim();
+      if (title.length === 0 || title.length > 200) return res.status(400).json({ success: false, message: "Title must be between 1 and 200 characters" });
+    }
+    
+    if (content !== undefined && typeof content !== "string") {
+      return res.status(400).json({ success: false, message: "Content must be a string" });
     }
 
     const updatedPage = await prisma.wikiPage.update({
@@ -150,6 +178,8 @@ export const updateWikiPage = async (req, res) => {
 export const deleteWikiPage = async (req, res) => {
   try {
     const { workspaceId, pageId } = req.params;
+    if (isNaN(parseInt(workspaceId))) return res.status(400).json({ success: false, message: "Invalid Workspace ID." });
+    if (isNaN(parseInt(pageId))) return res.status(400).json({ success: false, message: "Invalid Page ID." });
 
     const page = await prisma.wikiPage.findFirst({
       where: { id: parseInt(pageId), workspaceId: parseInt(workspaceId) },
@@ -347,7 +377,15 @@ export const pushWikiToGithub = async (req, res) => {
       for (const page of pages) {
         // Fix #2: Sanitize titles if they don't have a githubPath yet
         const relPath = page.githubPath || `${sanitizeFilename(page.title)}.md`;
-        const fullPath = path.join(tempDir, relPath);
+        const fullPath = path.resolve(tempDir, relPath);
+        
+        // HUGE SECURITY FIX: Prevent Path Traversal (Arbitrary File Write)
+        // If the title or githubPath contains "../../", it could escape the tempDir
+        // and overwrite system files (e.g., C:\tmp\hacked.md or /etc/passwd)
+        if (!fullPath.startsWith(path.resolve(tempDir))) {
+          console.warn(`[SECURITY] Blocked path traversal attempt in wiki: ${relPath}`);
+          continue; // Skip writing this malicious file
+        }
         
         // Ensure any subdirectories exist before writing (e.g., if relPath is "Backend/Setup.md")
         fs.mkdirSync(path.dirname(fullPath), { recursive: true });

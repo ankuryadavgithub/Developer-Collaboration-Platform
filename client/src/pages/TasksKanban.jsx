@@ -182,7 +182,7 @@ const TasksKanban = () => {
         <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
         
         <div className="max-w-[1600px] mx-auto mt-6 h-[calc(100vh-140px)] flex flex-col">
-          <div className="flex items-center justify-between mb-6 shrink-0">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 shrink-0">
             <div>
               <h1 className="text-3xl font-bold flex items-center gap-3 text-white">
                 <ListTodo size={32} className="text-violet-500" /> Kanban Board
@@ -208,13 +208,13 @@ const TasksKanban = () => {
           {loading ? (
             <div className="text-white text-center py-10">Loading board...</div>
           ) : (
-            <div className="flex gap-6 overflow-x-auto pb-4 flex-1">
+            <div className="flex gap-4 md:gap-6 overflow-x-auto pb-4 flex-1 snap-x">
               {COLUMNS.map(column => {
                 const columnTasks = tasks.filter(t => t.status === column.id);
                 return (
                   <div 
                     key={column.id}
-                    className="flex-shrink-0 w-80 bg-[#1c1f2e]/80 rounded-xl border border-slate-800 flex flex-col overflow-hidden"
+                    className="flex-shrink-0 w-[85vw] max-w-[320px] md:w-80 snap-center bg-[#1c1f2e]/80 rounded-xl border border-slate-800 flex flex-col overflow-hidden"
                     onDrop={(e) => handleDrop(e, column.id)}
                     onDragOver={handleDragOver}
                   >
@@ -357,7 +357,7 @@ const TasksKanban = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2">Type</label>
                     <select
@@ -430,7 +430,7 @@ const TasksKanban = () => {
                   </select>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                       <Star size={16} /> Story Points

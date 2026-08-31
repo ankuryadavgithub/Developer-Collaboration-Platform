@@ -164,7 +164,7 @@ const WorkspaceSettings = () => {
             ← Back to Workspace
           </button>
 
-          <div className="flex items-center gap-4 mb-8">
+          <div className="flex flex-wrap items-center gap-4 mb-8">
             <h1 className="text-3xl font-bold">Workspace Settings</h1>
             {status === "ARCHIVED" && (
               <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase">
@@ -225,16 +225,16 @@ const WorkspaceSettings = () => {
               <h2 className="text-xl font-bold mb-6 border-b border-[#ffffff]/10 pb-4">Repository Configuration</h2>
               
               {repository ? (
-                <div className="bg-[#0f111a] p-4 rounded-lg border border-[#ffffff]/10 flex justify-between items-center">
-                  <div>
-                    <p className="text-white font-bold">{repository.fullName}</p>
-                    <a href={repository.htmlUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-400 hover:underline">
+                <div className="bg-[#0f111a] p-4 rounded-lg border border-[#ffffff]/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="w-full min-w-0">
+                    <p className="text-white font-bold truncate">{repository.fullName}</p>
+                    <a href={repository.htmlUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-400 hover:underline block truncate">
                       {repository.htmlUrl}
                     </a>
                   </div>
                   <button
                     onClick={handleRemoveRepo}
-                    className="bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+                    className="w-full sm:w-auto bg-red-500/10 text-red-500 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium transition-colors shrink-0"
                   >
                     Disconnect
                   </button>
@@ -242,14 +242,14 @@ const WorkspaceSettings = () => {
               ) : (
                 <div className="space-y-6">
                   {previousRepo && (
-                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 flex justify-between items-center">
-                      <div>
+                    <div className="bg-blue-900/20 p-4 rounded-lg border border-blue-500/30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="w-full min-w-0">
                         <p className="text-sm text-blue-300 mb-1">Previously connected to</p>
-                        <p className="text-white font-bold">{previousRepo.fullName}</p>
+                        <p className="text-white font-bold truncate">{previousRepo.fullName}</p>
                       </div>
                       <button
                         onClick={(e) => handleConnectRepo(e, previousRepo.htmlUrl)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm shrink-0"
                       >
                         Reconnect
                       </button>
@@ -259,18 +259,18 @@ const WorkspaceSettings = () => {
                   <div>
                     {previousRepo && <p className="text-sm text-slate-400 mb-4 text-center">--- OR ---</p>}
                     <label className="block text-sm font-medium text-slate-400 mb-2">Connect a new repository</label>
-                    <form onSubmit={handleConnectRepo} className="flex gap-4">
+                    <form onSubmit={handleConnectRepo} className="flex flex-col sm:flex-row gap-4">
                       <input
                         type="url"
                         value={repoUrl}
                         onChange={(e) => setRepoUrl(e.target.value)}
                         placeholder="https://github.com/owner/repo"
                         required
-                        className="flex-1 bg-[#0f111a] border border-[#ffffff]/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500"
+                        className="flex-1 bg-[#0f111a] border border-[#ffffff]/10 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 w-full"
                       />
                       <button
                         type="submit"
-                        className="bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+                        className="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white font-medium py-3 sm:py-2 px-6 rounded-lg transition-colors"
                       >
                         Connect
                       </button>
@@ -300,7 +300,7 @@ const WorkspaceSettings = () => {
                 </div>
                 <button
                   onClick={handleToggleArchive}
-                  className={`${status === "ARCHIVED" ? 'bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20' : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'} border font-bold py-2 px-6 rounded-lg transition-colors whitespace-nowrap`}
+                  className={`w-full md:w-auto text-center ${status === "ARCHIVED" ? 'bg-orange-500/10 text-orange-400 border-orange-500/30 hover:bg-orange-500/20' : 'bg-red-500/10 text-red-500 border-red-500/30 hover:bg-red-500/20'} border font-bold py-3 md:py-2 px-6 rounded-lg transition-colors whitespace-nowrap`}
                 >
                   {status === "ARCHIVED" ? "Restore Workspace" : "Archive Workspace"}
                 </button>
