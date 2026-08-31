@@ -4,10 +4,342 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PlatformRole {
+  PLATFORM_ADMIN
+  USER
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum WorkspaceRole {
+  WORKSPACE_ADMIN
+  CONTRIBUTOR
+  VIEWER
+}
+
+enum WorkspaceStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ProjectStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum SprintStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum ActivityType {
+  PROJECT_CREATED
+  TASK_CREATED
+  TASK_UPDATED
+  TASK_COMPLETED
+  SPRINT_CREATED
+  SPRINT_STARTED
+  SPRINT_COMPLETED
+  MEMBER_ADDED
+}
+
+model User {
+  id               Int      @id @default(autoincrement())
+  username         String?  @unique
+  email            String   @unique
+  password         String?
+  jobTitle         String?
+  googleId         String?  @unique
+  githubId         String?  @unique 
+  githubUsername   String?
+  githubAccessToken     String?   
+  refreshToken     String? 
+  forgotPasswordToken   String?
+  forgotPasswordExpiry  DateTime?
+  avatar           String?
+  profileCompleted Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  platformRole          PlatformRole @default(USER)
+  organizationMembers   OrganizationMember[]
+  invitationsReceived   Invitation[] @relation("ReceivedInvitations")
+  invitationsSent       Invitation[] @relation("SentInvitations")
+  workspaceMembers      WorkspaceMember[]
+  workspacesCreated     Workspace[]
+  assignedTasks         Task[]       @relation("AssignedTasks")
+  createdProjects       Project[]    @relation("CreatedProjects")
+  createdSprints        Sprint[]     @relation("CreatedSprints")
+  createdTasks          Task[]       @relation("CreatedTasks")
+  activities            Activity[]
+  notifications         Notification[]
+  createdWikiPages      WikiPage[]
+}
+
+model Organization {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  ownerId     Int
+  status      String   @default("ACTIVE") // e.g. ACTIVE, SUSPENDED
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  invitations           Invitation[]
+  workspaces            Workspace[]
+}
+
+model OrganizationMember {
+  id             Int              @id @default(autoincrement())
+  organizationId Int
+  userId         Int
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now())
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+}
+
+model Invitation {
+  id             Int              @id @default(autoincrement())
+  organizationId Int
+  invitedUserId  Int
+  invitedById    Int
+  role           OrganizationRole @default(MEMBER)
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime         // We will set this in the backend (e.g. 7 days from now)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedUser    User             @relation("ReceivedInvitations", fields: [invitedUserId], references: [id], onDelete: Cascade)
+  invitedBy      User             @relation("SentInvitations", fields: [invitedById], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id             Int              @id @default(autoincrement())
+  organizationId Int
+  name           String
+  description    String?
+  status         WorkspaceStatus  @default(ACTIVE)
+  createdById    Int
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy      User             @relation(fields: [createdById], references: [id])
+  repository     Repository?
+  members        WorkspaceMember[]
+  projects              Project[]
+  sprints               Sprint[]
+  tasks                 Task[]
+  activities            Activity[]
+  wikiPages             WikiPage[]
+}
+
+model Repository {
+  id                 Int       @id @default(autoincrement())
+  workspaceId        Int       @unique
+  githubRepositoryId String?   @unique  // Stored as String to prevent integer overflow
+  name               String
+  fullName           String
+  owner              String
+  description        String?
+  url                String?
+  htmlUrl            String
+  cloneUrl           String?
+  sshUrl             String?
+  defaultBranch      String    @default("main")
+  visibility         String    @default("private")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model WorkspaceMember {
+  id             Int           @id @default(autoincrement())
+  workspaceId    Int
+  userId         Int
+  role           WorkspaceRole @default(VIEWER)
+  joinedAt       DateTime      @default(now())
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+}
+
+model Project {
+  id              Int             @id @default(autoincrement())
+  workspaceId     Int
+  name            String
+  description     String?
+  status          ProjectStatus   @default(PLANNED)
+  progress        Int             @default(0) // Calculated dynamically in backend
+  createdById     Int
+  githubProjectId String?         // To link with GitHub Projects V2
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  workspace       Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy       User            @relation("CreatedProjects", fields: [createdById], references: [id])
+  tasks           Task[]
+
+  @@unique([workspaceId, name])
+}
+
+model Sprint {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  name           String
+  goal           String?
+  startDate      DateTime?
+  endDate        DateTime?
+  status         SprintStatus    @default(PLANNED)
+  createdById    Int
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy      User            @relation("CreatedSprints", fields: [createdById], references: [id])
+  tasks          Task[]
+
+  @@index([workspaceId, status])
+}
+
+model Task {
+  id               Int             @id @default(autoincrement())
+  projectId        Int
+  workspaceId      Int
+  sprintId         Int?
+  title            String
+  description      String?
+  status           TaskStatus      @default(TODO)
+  priority         TaskPriority    @default(MEDIUM)
+  assigneeId       Int?
+  createdById      Int
+  dueDate          DateTime?
+  storyPoints      Int?            @default(0)
+  githubIssueId    String?         // Node ID of the GitHub Issue
+  githubItemId     String?         // Node ID of the GitHub Project Item
+  githubIssueNum   Int?            // #12, #15 etc.
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  project          Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  workspace        Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sprint           Sprint?         @relation(fields: [sprintId], references: [id])
+  assignee         User?           @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  createdBy        User            @relation("CreatedTasks", fields: [createdById], references: [id])
+
+  @@index([workspaceId])
+  @@index([projectId])
+  @@index([sprintId])
+  @@index([assigneeId])
+}
+
+model Activity {
+  id             Int             @id @default(autoincrement())
+  workspaceId    Int
+  userId         Int
+  type           ActivityType
+  entityType     String          // "PROJECT", "TASK", "SPRINT"
+  entityId       Int             
+  message        String
+  createdAt      DateTime        @default(now())
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+}
+
+
+enum NotificationType {
+  INVITATION
+  MENTION
+  TASK_ASSIGNED
+  SYSTEM
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  metadata  Json?            
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead]) 
+  @@index([createdAt])
+}
+
+model WikiPage {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  title       String
+  content     String?   
+  
+  // --- New Sync Fields ---
+  githubPath    String?   // The filename on GitHub (e.g. "Home.md")
+  lastSyncedAt  DateTime? // Timestamp of last push/fetch
+  isDraft       Boolean   @default(true) // True if local changes aren't pushed
+  isStarred     Boolean   @default(false) // True if the page is favorited/pinned
+  
+  createdById Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation(fields: [createdById], references: [id])
+
+  @@unique([workspaceId, title])
 }
