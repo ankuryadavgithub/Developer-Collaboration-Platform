@@ -10,6 +10,7 @@ import {
   getCommits,
   getBranches,
   getActionsRuns,
+  getRepositoryHealth
 } from "../controllers/github.controller.js";
 
 const router = express.Router({ mergeParams: true });
@@ -34,6 +35,7 @@ router.get("/commits", requireAuth, requireWorkspaceMember, getCommits);
 router.get("/branches", requireAuth, requireWorkspaceMember, getBranches);
 
 router.get("/actions/runs", requireAuth, requireWorkspaceMember, getActionsRuns);
+router.get("/health", requireAuth, requireWorkspaceMember, getRepositoryHealth);
 
 // Global user routes
 router.get("/repositories", requireAuth, getAccessibleRepositories);

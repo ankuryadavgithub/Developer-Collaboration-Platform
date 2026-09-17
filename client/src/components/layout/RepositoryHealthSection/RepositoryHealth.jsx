@@ -1,46 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
-
-const repositoryHealthData = [
-  {
-    title: "Code Coverage",
-    value: "92%",
-    type: "progress",
-    progress: 92,
-    color: "bg-green-500",
-  },
-  {
-    title: "Test Passing Rate",
-    value: "98%",
-    type: "progress",
-    progress: 98,
-    color: "bg-green-500",
-  },
-  {
-    title: "Open Issues",
-    value: "18",
-    type: "chart",
-    chartColor: "#ef4444",
-  },
-  {
-    title: "Technical Debt",
-    value: "4.2 hrs",
-    type: "chart",
-    chartColor: "#f97316",
-  },
-  {
-    title: "Code Smells",
-    value: "12",
-    type: "chart",
-    chartColor: "#a855f7",
-  },
-  {
-    title: "Duplications",
-    value: "3.1%",
-    type: "chart",
-    chartColor: "#3b82f6",
-  },
-];
+import axios from "axios";
+import { Loader2, ShieldAlert, GitPullRequest, Activity, GitBranch, AlertCircle } from "lucide-react";
 
 const chartData = [
   { value: 20 },
@@ -52,25 +13,34 @@ const chartData = [
   { value: 48 },
 ];
 
-const HealthMetric = ({ title, value, type, progress, color, chartColor }) => {
+const HealthMetric = ({ title, value, type, progress, color, chartColor, icon: Icon, description }) => {
   return (
-    <div className="px-4 py-4 bg-[#111827] min-w-0 flex flex-col justify-between">
-      {/* Title */}
-      <h4 className="text-sm text-slate-400 mb-2 truncate">{title}</h4>
+    <div className="px-5 py-5 bg-[#111827] min-w-0 flex flex-col justify-between group">
+      <div className="flex items-start justify-between mb-2">
+        <h4 className="text-sm font-medium text-slate-400 flex items-center gap-2">
+          {Icon && <Icon size={15} className="opacity-60 shrink-0" />}
+          {title}
+        </h4>
+      </div>
+      
+      <p className="text-3xl font-bold text-white mb-1 tracking-tight">{value}</p>
+      
+      {description && (
+        <p className="text-xs text-slate-500 mb-3">{description}</p>
+      )}
 
-      {/* Value */}
-      <p className="text-3xl font-semibold text-slate-100 mb-4">{value}</p>
-
-      {/* Progress Bars */}
       {type === "progress" ? (
-        <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full ${color}`}
-            style={{ width: `${progress}%` }}
-          />
+        <div className="mt-auto">
+          <div className="h-2 bg-[#1c1f2e] rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${color}`}
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1">{progress}% success rate</p>
         </div>
       ) : (
-        <div className="h-10">
+        <div className="h-10 mt-auto opacity-70 group-hover:opacity-100 transition-opacity">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData}>
               <Line
@@ -89,17 +59,122 @@ const HealthMetric = ({ title, value, type, progress, color, chartColor }) => {
 };
 
 const RepositoryHealth = ({ orgId, workspaceId }) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchMetrics = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await axios.get(
+        `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/github/health`,
+        { withCredentials: true }
+      );
+      if (res.data.success) {
+        setData(res.data.data);
+      } else {
+        // BUG FIX: handle success:false without throwing
+        setError(res.data.message || "Failed to fetch health data.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to fetch repository health data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (orgId && workspaceId) fetchMetrics();
+  }, [orgId, workspaceId]);
+
+  if (loading) {
+    return (
+      <div className="w-full bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden min-h-[180px] flex items-center justify-center text-slate-400">
+        <Loader2 className="animate-spin mr-2" size={18} /> Analyzing GitHub Repository...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="w-full bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden min-h-[180px] flex flex-col items-center justify-center text-red-400 p-6 text-center gap-2">
+        <AlertCircle size={28} className="opacity-60" />
+        <p className="text-sm">{error || "No data available."}</p>
+        <button
+          onClick={fetchMetrics}
+          className="mt-2 text-xs text-indigo-400 hover:text-indigo-300 underline"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const repositoryHealthData = [
+    {
+      title: "Build Reliability",
+      value: data.buildReliability === "N/A" ? "N/A" : data.buildReliability,
+      description: "CI/CD Pipeline Success Rate",
+      type: "progress",
+      progress: data.buildReliabilityVal || 0,
+      color:
+        data.buildReliabilityVal > 80
+          ? "bg-green-500"
+          : data.buildReliabilityVal > 50
+          ? "bg-orange-500"
+          : "bg-red-500",
+      icon: Activity,
+    },
+    {
+      title: "Security Alerts",
+      value: data.securityAlerts.toString(),
+      description: "Active Dependabot Vulnerabilities",
+      type: "chart",
+      chartColor: data.securityAlerts > 0 ? "#ef4444" : "#22c55e",
+      icon: ShieldAlert,
+    },
+    {
+      title: "Open Issues",
+      value: data.openIssues.toString(),
+      description: "Unresolved issues in repository",
+      type: "chart",
+      chartColor: "#3b82f6",
+      icon: AlertCircle,
+    },
+    {
+      title: "Stale PRs",
+      value: data.stalePRs.toString(),
+      description: "Pull Requests open > 14 days",
+      type: "chart",
+      chartColor: data.stalePRs > 0 ? "#f97316" : "#22c55e",
+      icon: GitPullRequest,
+    },
+  ];
+
   return (
-    <div className="w-full bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden">
+    <div className="w-full bg-[#111827] border border-slate-800 rounded-2xl overflow-hidden relative">
       {/* Header */}
-      <div className="px-6 py-4 border-b border-slate-800">
-        <h3 className="text-lg font-semibold text-slate-100">
-          Repository Health
-        </h3>
+      <div className="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-[#0f111a]/50">
+        <div>
+          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+            <GitBranch size={20} className="text-indigo-400" />
+            Repository Health
+          </h3>
+          <p className="text-xs text-slate-400 mt-1">Real-time native GitHub metrics — no setup required</p>
+        </div>
+        <button
+          onClick={fetchMetrics}
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1"
+          title="Refresh"
+        >
+          <Activity size={14} /> Refresh
+        </button>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-px bg-slate-800">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-px bg-slate-800">
         {repositoryHealthData.map((item) => (
           <HealthMetric key={item.title} {...item} />
         ))}

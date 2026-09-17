@@ -447,3 +447,82 @@ export const getActionsRuns = async (req, res) => {
     return res.status(500).json({ success: false, message: "Could not fetch CI/CD runs." });
   }
 };
+
+export const getRepositoryHealth = async (req, res) => {
+  try {
+    const githubToken = await getGithubToken(req, res);
+    if (!githubToken) return;
+
+    const repository = await prisma.repository.findUnique({ 
+      where: { workspaceId: req.workspace.id } 
+    });
+    
+    if (!repository) return res.status(404).json({ success: false, message: "No repo linked." });
+
+    const headers = githubHeaders(githubToken);
+    const baseUrl = `https://api.github.com/repos/${repository.owner}/${repository.name}`;
+
+    // 1. Fetch Issues (to count open issues, excluding PRs)
+    let openIssues = 0;
+    try {
+      const issuesRes = await fetch(`${baseUrl}/issues?state=open&per_page=100`, { headers });
+      if (issuesRes.ok) {
+        const issues = await issuesRes.json();
+        openIssues = issues.filter(i => !i.pull_request).length;
+      }
+    } catch (e) { console.error("Error fetching issues:", e); }
+
+    // 2. Fetch Dependabot Alerts (Security)
+    let securityAlerts = 0;
+    try {
+      const alertsRes = await fetch(`${baseUrl}/dependabot/alerts?state=open`, { headers });
+      if (alertsRes.ok) {
+        const alerts = await alertsRes.json();
+        securityAlerts = alerts.length;
+      }
+    } catch (e) { console.error("Error fetching dependabot alerts:", e); }
+
+    // 3. Fetch Stale PRs (> 14 days old)
+    let stalePRs = 0;
+    try {
+      const prsRes = await fetch(`${baseUrl}/pulls?state=open&per_page=100`, { headers });
+      if (prsRes.ok) {
+        const prs = await prsRes.json();
+        const fourteenDaysAgo = new Date();
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+        stalePRs = prs.filter(pr => new Date(pr.created_at) < fourteenDaysAgo).length;
+      }
+    } catch (e) { console.error("Error fetching PRs:", e); }
+
+    // 4. Fetch Actions Runs for Build Reliability
+    let buildReliability = "N/A";
+    let buildReliabilityVal = 0;
+    try {
+      const runsRes = await fetch(`${baseUrl}/actions/runs?per_page=50`, { headers });
+      if (runsRes.ok) {
+        const runsData = await runsRes.json();
+        const runs = runsData.workflow_runs || [];
+        const completedRuns = runs.filter(r => r.status === "completed" && (r.conclusion === "success" || r.conclusion === "failure"));
+        if (completedRuns.length > 0) {
+          const successful = completedRuns.filter(r => r.conclusion === "success").length;
+          buildReliabilityVal = Math.round((successful / completedRuns.length) * 100);
+          buildReliability = `${buildReliabilityVal}%`;
+        }
+      }
+    } catch (e) { console.error("Error fetching Action runs:", e); }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        openIssues,
+        securityAlerts,
+        stalePRs,
+        buildReliability,
+        buildReliabilityVal
+      }
+    });
+  } catch (error) {
+    console.error("Failed to fetch repository health:", error);
+    return res.status(500).json({ success: false, message: "Could not fetch repository health metrics." });
+  }
+};
