@@ -397,3 +397,42 @@ export const getBranches = async (req, res) => {
     return res.status(500).json({ success: false, message: "Could not fetch branches." });
   }
 };
+
+export const getActionsRuns = async (req, res) => {
+  try {
+    const githubToken = await getGithubToken(req, res);
+    if (!githubToken) return;
+
+    const repository = await prisma.repository.findUnique({ 
+      where: { workspaceId: req.workspace.id } 
+    });
+    
+    if (!repository) return res.status(404).json({ success: false, message: "No repo linked." });
+
+    const response = await fetch(
+      `https://api.github.com/repos/${repository.owner}/${repository.name}/actions/runs?per_page=20`, 
+      { headers: githubHeaders(githubToken) }
+    );
+    
+    const runsData = await response.json();
+    if (!response.ok) return res.status(response.status).json({ success: false, message: runsData.message });
+
+    const formattedRuns = (runsData.workflow_runs || []).map((run) => ({
+      id: run.id,
+      name: run.name,
+      headBranch: run.head_branch,
+      headSha: run.head_sha,
+      status: run.status,
+      conclusion: run.conclusion,
+      url: run.html_url,
+      triggerMessage: run.head_commit?.message?.split('\n')[0] || "Unknown trigger",
+      triggerAuthor: run.head_commit?.author?.name || run.actor?.login || "Unknown author",
+      createdAt: run.created_at,
+      updatedAt: run.updated_at,
+    }));
+
+    return res.status(200).json({ success: true, data: formattedRuns });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Could not fetch CI/CD runs." });
+  }
+};

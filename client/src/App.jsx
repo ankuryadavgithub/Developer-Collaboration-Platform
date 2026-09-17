@@ -19,6 +19,7 @@ import Workspaces from "./pages/Workspaces";
 import CreateWorkspaceWizard from "./pages/CreateWorkspaceWizard";
 import Wiki from "./pages/Wiki";
 import Commits from "./pages/Commits";
+import CICD from "./pages/CICD";
 
 import Invitations from "./pages/Invitations";
 import WorkspaceSettings from "./pages/WorkspaceSettings";
@@ -238,6 +239,15 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <Commits />
+            </ProtectedRoute>
+          }
+        />
+        
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/ci-cd"
+          element={
+            <ProtectedRoute>
+              <CICD />
             </ProtectedRoute>
           }
         />
