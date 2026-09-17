@@ -410,26 +410,37 @@ export const getActionsRuns = async (req, res) => {
     if (!repository) return res.status(404).json({ success: false, message: "No repo linked." });
 
     const response = await fetch(
-      `https://api.github.com/repos/${repository.owner}/${repository.name}/actions/runs?per_page=20`, 
+      `https://api.github.com/repos/${repository.owner}/${repository.name}/actions/runs?per_page=100`, 
       { headers: githubHeaders(githubToken) }
     );
     
     const runsData = await response.json();
     if (!response.ok) return res.status(response.status).json({ success: false, message: runsData.message });
 
-    const formattedRuns = (runsData.workflow_runs || []).map((run) => ({
-      id: run.id,
-      name: run.name,
-      headBranch: run.head_branch,
-      headSha: run.head_sha,
-      status: run.status,
-      conclusion: run.conclusion,
-      url: run.html_url,
-      triggerMessage: run.head_commit?.message?.split('\n')[0] || "Unknown trigger",
-      triggerAuthor: run.head_commit?.author?.name || run.actor?.login || "Unknown author",
-      createdAt: run.created_at,
-      updatedAt: run.updated_at,
-    }));
+    const formattedRuns = (runsData.workflow_runs || []).map((run) => {
+      // Calculate duration in seconds
+      const start = new Date(run.run_started_at || run.created_at);
+      const end = new Date(run.updated_at);
+      const durationSeconds = Math.max(0, Math.floor((end - start) / 1000));
+
+      return {
+        id: run.id,
+        name: run.name,
+        runNumber: run.run_number,
+        headBranch: run.head_branch,
+        headSha: run.head_sha,
+        status: run.status,
+        conclusion: run.conclusion,
+        url: run.html_url,
+        event: run.event,
+        path: run.path,
+        durationSeconds,
+        triggerMessage: run.head_commit?.message?.split('\n')[0] || "Unknown trigger",
+        triggerAuthor: run.head_commit?.author?.name || run.actor?.login || "Unknown author",
+        createdAt: run.created_at,
+        updatedAt: run.updated_at,
+      };
+    });
 
     return res.status(200).json({ success: true, data: formattedRuns });
   } catch (error) {
