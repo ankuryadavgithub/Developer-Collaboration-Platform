@@ -3,6 +3,12 @@ import { logActivity } from "../utils/activityLogger.js";
 
 const prisma = new PrismaClient();
 
+const parseOptionalDate = (value) => {
+  if (value === undefined || value === null || value === "" || value === "null") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
 // Helper to calculate progress based on Story Points (fallback to task count)
 const calculateSprintProgress = (tasks) => {
   if (!tasks || tasks.length === 0) return 0;
@@ -48,13 +54,22 @@ export const createSprint = async (req, res) => {
       }
     }
 
+    const parsedStartDate = parseOptionalDate(startDate);
+    const parsedEndDate = parseOptionalDate(endDate);
+    if (parsedStartDate === undefined || parsedEndDate === undefined) {
+      return res.status(400).json({ success: false, message: "Invalid sprint date." });
+    }
+    if (parsedStartDate && parsedEndDate && parsedStartDate > parsedEndDate) {
+      return res.status(400).json({ success: false, message: "Start date must be before or equal to end date." });
+    }
+
     const sprint = await prisma.sprint.create({
       data: {
         workspaceId,
         name,
         goal: trimmedGoal,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        startDate: parsedStartDate,
+        endDate: parsedEndDate,
         createdById: req.user.id,
       },
     });
@@ -137,8 +152,13 @@ export const updateSprint = async (req, res) => {
     }
 
     // 1. Date Validation (Start date <= End date)
-    const start = startDate ? new Date(startDate) : existingSprint.startDate;
-    const end = endDate ? new Date(endDate) : existingSprint.endDate;
+    const parsedStartDate = startDate !== undefined ? parseOptionalDate(startDate) : existingSprint.startDate;
+    const parsedEndDate = endDate !== undefined ? parseOptionalDate(endDate) : existingSprint.endDate;
+    if (parsedStartDate === undefined || parsedEndDate === undefined) {
+      return res.status(400).json({ success: false, message: "Invalid sprint date." });
+    }
+    const start = parsedStartDate;
+    const end = parsedEndDate;
     if (start && end && start > end) {
       return res.status(400).json({ success: false, message: "Start date must be before or equal to End date." });
     }

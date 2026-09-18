@@ -4,12 +4,31 @@ import { v4 as uuidv4 } from "uuid";
 
 const prisma = new PrismaClient();
 
+const parseCalendarBoundary = (value, isEnd = false) => {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T${isEnd ? "23:59:59.999" : "00:00:00.000"}Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
 // @desc    Get all calendar events (tasks and sprints) for a workspace
 // @route   GET /api/organizations/:orgId/workspaces/:workspaceId/calendar
 export const getWorkspaceCalendar = async (req, res) => {
   try {
     const workspaceId = req.workspace.id;
     const { start, end, assigneeId, hideCompleted, projectId, priority } = req.query;
+
+    if (assigneeId && assigneeId !== "null" && Number.isNaN(Number.parseInt(assigneeId, 10))) {
+      return res.status(400).json({ success: false, message: "Invalid assignee filter." });
+    }
+    if (projectId && projectId !== "null" && projectId !== "ALL" && Number.isNaN(Number.parseInt(projectId, 10))) {
+      return res.status(400).json({ success: false, message: "Invalid project filter." });
+    }
+
+    const rangeStart = start ? parseCalendarBoundary(start) : null;
+    const rangeEnd = end ? parseCalendarBoundary(end, true) : null;
+    if ((start && !rangeStart) || (end && !rangeEnd) || (rangeStart && rangeEnd && rangeStart > rangeEnd)) {
+      return res.status(400).json({ success: false, message: "Invalid calendar date range." });
+    }
 
     const taskWhere = { workspaceId };
     
@@ -30,12 +49,12 @@ export const getWorkspaceCalendar = async (req, res) => {
     }
 
     // Date range filter for tasks with due dates
-    if (start && end) {
+    if (rangeStart && rangeEnd) {
       taskWhere.OR = [
         {
           dueDate: {
-            gte: new Date(start),
-            lte: new Date(end),
+            gte: rangeStart,
+            lte: rangeEnd,
           },
         },
         {
@@ -59,10 +78,10 @@ export const getWorkspaceCalendar = async (req, res) => {
     if (hideCompleted === "true") {
       sprintWhere.status = { not: "COMPLETED" };
     }
-    if (start && end) {
+    if (rangeStart && rangeEnd) {
       sprintWhere.AND = [
-        { startDate: { lte: new Date(end) } },
-        { endDate: { gte: new Date(start) } },
+        { startDate: { lte: rangeEnd } },
+        { endDate: { gte: rangeStart } },
       ];
     }
 
@@ -132,7 +151,7 @@ export const getICalFeed = async (req, res) => {
       },
       include: {
         project: { select: { name: true } },
-        workspace: { select: { name: true } },
+        workspace: { select: { name: true, organizationId: true } },
       },
     });
 
@@ -143,13 +162,15 @@ export const getICalFeed = async (req, res) => {
 
     tasks.forEach((task) => {
       const due = new Date(task.dueDate);
+      const exclusiveEnd = new Date(due);
+      exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
       calendar.createEvent({
         start: due,
-        end: due,
+        end: exclusiveEnd,
         allDay: true,
         summary: `[${task.workspace?.name || "DevHub"}] ${task.title}`,
         description: `Project: ${task.project?.name || "General"}\nPriority: ${task.priority}\nStatus: ${task.status}\n\n${task.description || ""}`,
-        url: `http://localhost:5173/workspaces/${task.workspaceId}/calendar`,
+        url: `${req.protocol}://${req.get("host").replace("5000", "5173")}/organizations/${task.workspace?.organizationId || ""}/workspaces/${task.workspaceId}/calendar`,
       });
     });
 

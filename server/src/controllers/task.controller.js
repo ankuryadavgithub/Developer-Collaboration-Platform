@@ -3,6 +3,12 @@ import { logActivity } from "../utils/activityLogger.js";
 
 const prisma = new PrismaClient();
 
+const parseOptionalDate = (value) => {
+  if (value === undefined || value === null || value === "" || value === "null") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
 // @desc    Create a new task
 // @route   POST /api/organizations/:orgId/workspaces/:workspaceId/tasks
 export const createTask = async (req, res) => {
@@ -47,6 +53,10 @@ export const createTask = async (req, res) => {
     }
     if (storyPoints !== undefined && isNaN(parseInt(storyPoints))) {
       return res.status(400).json({ success: false, message: "Invalid Story Points." });
+    }
+    const parsedDueDate = parseOptionalDate(dueDate);
+    if (parsedDueDate === undefined) {
+      return res.status(400).json({ success: false, message: "Invalid due date." });
     }
 
     // Enforce data isolation: Project MUST belong to this Workspace
@@ -148,7 +158,7 @@ export const createTask = async (req, res) => {
         description,
         priority: priority || "MEDIUM",
         assigneeId: assigneeId ? parseInt(assigneeId) : null,
-        dueDate: dueDate ? new Date(dueDate) : null,
+        dueDate: parsedDueDate,
         storyPoints: storyPoints ? parseInt(storyPoints) : 0,
         createdById: req.user.id,
         githubIssueId,
@@ -252,7 +262,6 @@ export const updateTask = async (req, res) => {
     if (storyPoints !== undefined && isNaN(parseInt(storyPoints))) {
       return res.status(400).json({ success: false, message: "Invalid Story Points." });
     }
-
     const existing = await prisma.task.findFirst({
       where: { id: taskId, workspaceId },
     });
@@ -260,6 +269,11 @@ export const updateTask = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, message: "Task not found." });
+
+    const parsedDueDate = dueDate !== undefined ? parseOptionalDate(dueDate) : existing.dueDate;
+    if (parsedDueDate === undefined) {
+      return res.status(400).json({ success: false, message: "Invalid due date." });
+    }
 
     if (assigneeId && assigneeId !== "null" && assigneeId !== existing.assigneeId) {
       const member = await prisma.workspaceMember.findUnique({
@@ -310,9 +324,7 @@ export const updateTask = async (req, res) => {
             : existing.storyPoints,
         dueDate:
           dueDate !== undefined
-            ? dueDate && dueDate !== "null"
-              ? new Date(dueDate)
-              : null
+            ? parsedDueDate
             : existing.dueDate,
       },
     });

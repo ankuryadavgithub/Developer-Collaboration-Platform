@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
-  Filter,
   CheckCircle2,
   AlertCircle,
   Clock,
@@ -19,10 +18,10 @@ import {
   Check,
   Globe,
   User,
-  Star,
   FileText,
-  RotateCcw,
   Sparkles,
+  Link2,
+  MoreVertical,
 } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import Navbar from "../components/layout/Navbar";
@@ -55,6 +54,8 @@ const TASK_TYPE_STYLES = {
 };
 
 const getTaskType = (task) => {
+  // Task has no tags relation in the current Prisma schema, so infer the display
+  // type from fields returned by the calendar API.
   const title = (task.title || "").toLowerCase();
   const desc = (task.description || "").toLowerCase();
   if (title.includes("bug") || title.includes("fix") || title.includes("error") || desc.includes("bug")) {
@@ -67,6 +68,34 @@ const getTaskType = (task) => {
     return "ENHANCEMENT";
   }
   return "FEATURE";
+};
+
+const formatApiDate = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+// Calendar dates are date-only values. Creating them at local noon avoids a
+// browser interpreting YYYY-MM-DD as UTC and moving a deadline by one day.
+const toCalendarIso = (dateString) => new Date(`${dateString}T12:00:00`).toISOString();
+
+const getVisibleRange = (date, viewMode) => {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(start);
+
+  if (viewMode === "month") {
+    start.setDate(1);
+    start.setDate(start.getDate() - start.getDay());
+    end.setMonth(end.getMonth() + 1, 0);
+    end.setDate(end.getDate() + (6 - end.getDay()));
+  } else if (viewMode === "week") {
+    start.setDate(start.getDate() - start.getDay());
+    end.setDate(start.getDate() + 6);
+  }
+
+  return { start: formatApiDate(start), end: formatApiDate(end) };
 };
 
 const CalendarPage = () => {
@@ -85,16 +114,15 @@ const CalendarPage = () => {
   const [members, setMembers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [calendarError, setCalendarError] = useState("");
 
   // Filters
   const [hideCompleted, setHideCompleted] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("ALL");
   const [selectedType, setSelectedType] = useState("ALL");
-  const [selectedPriority, setSelectedPriority] = useState("ALL");
   const [backlogSearch, setBacklogSearch] = useState("");
 
   // Drawer & Modals
-  const [isBacklogOpen, setIsBacklogOpen] = useState(true);
   const [selectedTask, setSelectedTask] = useState(null);
   const [createModalDate, setCreateModalDate] = useState(null);
   const [showCreateChoiceModal, setShowCreateChoiceModal] = useState(false);
@@ -133,7 +161,7 @@ const CalendarPage = () => {
 
   useEffect(() => {
     fetchCalendarData();
-  }, [workspaceId, hideCompleted, selectedProjectId, selectedPriority]);
+  }, [workspaceId, currentDate, viewMode, hideCompleted, selectedProjectId]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -173,12 +201,12 @@ const CalendarPage = () => {
   const fetchCalendarData = async () => {
     try {
       setLoading(true);
+      setCalendarError("");
       const params = {
         hideCompleted: hideCompleted ? "true" : "false",
+        ...getVisibleRange(currentDate, viewMode),
       };
       if (selectedProjectId !== "ALL") params.projectId = selectedProjectId;
-      if (selectedPriority !== "ALL") params.priority = selectedPriority;
-
       const res = await axios.get(
         `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/calendar`,
         { params, withCredentials: true }
@@ -190,6 +218,7 @@ const CalendarPage = () => {
       }
     } catch (err) {
       console.error("Failed to fetch calendar data:", err);
+      setCalendarError(err.response?.data?.message || "Unable to load calendar data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -207,7 +236,7 @@ const CalendarPage = () => {
       }
     } catch (err) {
       console.error("Failed to fetch calendar token:", err);
-      alert("Failed to generate calendar subscription link.");
+      alert(err.response?.data?.message || "Failed to generate calendar subscription link.");
     }
   };
 
@@ -289,8 +318,9 @@ const CalendarPage = () => {
         days.push({ date: d, isCurrentMonth: true });
       }
 
-      // Next month filler to complete 35 or 42 grid slots
-      const remainingSlots = 42 - days.length >= 7 ? 42 - days.length : 35 - days.length;
+      // Next month filler: always complete to a full week row (35 or 42 total slots)
+      const totalSlotsNeeded = days.length <= 35 ? 35 : 42;
+      const remainingSlots = totalSlotsNeeded - days.length;
       for (let i = 1; i <= remainingSlots; i++) {
         const d = new Date(year, month + 1, i);
         days.push({ date: d, isCurrentMonth: false });
@@ -312,6 +342,58 @@ const CalendarPage = () => {
     }
   }, [currentDate, viewMode]);
 
+  // Turn each sprint into a horizontal, week-aware rail segment. A sprint that
+  // crosses a Sunday is split only at that week boundary so it remains a
+  // connected bar instead of being repeated in each calendar day.
+  const sprintSegments = useMemo(() => {
+    if (calendarDays.length < 7) return [];
+
+    const toLocalDay = (value) => {
+      const day = new Date(value);
+      day.setHours(0, 0, 0, 0);
+      return day;
+    };
+    const visibleStart = toLocalDay(calendarDays[0].date);
+    const visibleEnd = toLocalDay(calendarDays[calendarDays.length - 1].date);
+    const lanes = new Map();
+    const segments = [];
+
+    sprints
+      .filter((sprint) => sprint.startDate && sprint.endDate)
+      .sort((a, b) => new Date(a.startDate) - new Date(b.startDate))
+      .forEach((sprint, sprintIndex) => {
+        const sprintStart = toLocalDay(sprint.startDate);
+        const sprintEnd = toLocalDay(sprint.endDate);
+        if (sprintEnd < visibleStart || sprintStart > visibleEnd) return;
+
+        lanes.set(sprint.id, sprintIndex + 1);
+        let segmentStart = new Date(Math.max(sprintStart.getTime(), visibleStart.getTime()));
+        const finalDay = new Date(Math.min(sprintEnd.getTime(), visibleEnd.getTime()));
+
+        while (segmentStart <= finalDay) {
+          const weekEnd = new Date(segmentStart);
+          weekEnd.setDate(weekEnd.getDate() + (6 - weekEnd.getDay()));
+          const segmentEnd = new Date(Math.min(weekEnd.getTime(), finalDay.getTime()));
+          const span = Math.round((segmentEnd - segmentStart) / 86400000) + 1;
+
+          segments.push({
+            id: `${sprint.id}-${formatApiDate(segmentStart)}`,
+            sprint,
+            lane: lanes.get(sprint.id),
+            column: segmentStart.getDay() + 1,
+            span,
+            startsSprint: segmentStart.getTime() === sprintStart.getTime(),
+            endsSprint: segmentEnd.getTime() === sprintEnd.getTime(),
+          });
+
+          segmentStart = new Date(segmentEnd);
+          segmentStart.setDate(segmentStart.getDate() + 1);
+        }
+      });
+
+    return segments;
+  }, [calendarDays, sprints]);
+
   // Drag and Drop handling
   const handleDragStart = (e, task) => {
     e.dataTransfer.setData("application/json", JSON.stringify({ taskId: task.id }));
@@ -324,19 +406,17 @@ const CalendarPage = () => {
       if (!data?.taskId) return;
 
       const taskId = data.taskId;
-      const targetDate = new Date(dateStr);
-      // Set to middle of the day in UTC
-      targetDate.setHours(12, 0, 0, 0);
+      const dueDate = toCalendarIso(dateStr);
 
       // Optimistic UI update
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, dueDate: targetDate.toISOString() } : t))
+        prev.map((t) => (t.id === taskId ? { ...t, dueDate } : t))
       );
 
       // Backend sync
       await axios.patch(
         `http://localhost:5000/api/organizations/${orgId}/workspaces/${workspaceId}/tasks/${taskId}`,
-        { dueDate: targetDate.toISOString() },
+        { dueDate },
         { withCredentials: true }
       );
     } catch (err) {
@@ -389,7 +469,7 @@ const CalendarPage = () => {
         description: newTask.description,
         projectId: parseInt(newTask.projectId),
         priority: newTask.priority,
-        dueDate: newTask.dueDate ? new Date(newTask.dueDate).toISOString() : null,
+        dueDate: newTask.dueDate ? toCalendarIso(newTask.dueDate) : null,
         storyPoints: parseInt(newTask.storyPoints) || 0,
         assigneeId: newTask.assigneeId ? parseInt(newTask.assigneeId) : null,
       };
@@ -416,8 +496,8 @@ const CalendarPage = () => {
       const payload = {
         name: newSprint.name,
         goal: newSprint.goal,
-        startDate: newSprint.startDate ? new Date(newSprint.startDate).toISOString() : null,
-        endDate: newSprint.endDate ? new Date(newSprint.endDate).toISOString() : null,
+        startDate: newSprint.startDate ? toCalendarIso(newSprint.startDate) : null,
+        endDate: newSprint.endDate ? toCalendarIso(newSprint.endDate) : null,
       };
 
       const res = await axios.post(
@@ -447,7 +527,6 @@ const CalendarPage = () => {
     setHideCompleted(false);
     setSelectedProjectId("ALL");
     setSelectedType("ALL");
-    setSelectedPriority("ALL");
   };
 
   const isToday = (date) => {
@@ -463,19 +542,25 @@ const CalendarPage = () => {
     return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
 
+  const dayHeaders =
+    viewMode === "day"
+      ? [currentDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })]
+      : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const calendarColumns = viewMode === "day" ? "grid-cols-1" : "grid-cols-7";
+
   return (
     <div className="flex min-h-screen bg-[#0b0d14] text-slate-100 antialiased font-sans">
-      <Sidebar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+      <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <div className="flex flex-1 flex-col overflow-x-hidden min-w-0">
-        <Navbar isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
+        <Navbar toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-[1700px] w-full mx-auto flex flex-col gap-6">
+        <main className="flex-1 p-4 md:p-6 lg:px-7 lg:py-5 max-w-[1700px] w-full mx-auto flex flex-col gap-4">
           {/* HEADER SECTION */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-white/5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400 shrink-0">
-                <CalendarIcon size={22} />
+              <div className="w-11 h-11 flex items-center justify-center text-violet-500 shrink-0">
+                <CalendarIcon size={34} strokeWidth={1.8} />
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -491,55 +576,54 @@ const CalendarPage = () => {
             <div className="flex items-center gap-3">
               <button
                 onClick={fetchCalendarToken}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-600/20 transition-all cursor-pointer"
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#3b47f5] hover:bg-[#4a55ff] disabled:cursor-not-allowed disabled:opacity-60 text-white rounded-lg text-sm font-semibold shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
               >
-                <Globe size={16} />
+                <Link2 size={16} />
                 Sync Calendar
+              </button>
+              <button className="hidden md:inline-flex p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition cursor-pointer" aria-label="More calendar actions">
+                <MoreVertical size={18} />
               </button>
             </div>
           </div>
 
           {/* CONTROLS & FILTER TOOLBAR */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-[#121520] border border-white/5 rounded-2xl p-4 shadow-xl">
+          <div className="flex flex-col gap-3">
             {/* Left: Navigation */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center bg-[#1c1f2e] border border-white/10 rounded-xl p-1">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={handlePrev}
-                  className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
+                  className="p-2.5 bg-[#151c2d] border border-slate-700/80 hover:bg-white/5 rounded-lg text-slate-300 hover:text-white transition cursor-pointer"
                   title="Previous"
                 >
                   <ChevronLeft size={18} />
                 </button>
                 <button
                   onClick={handleToday}
-                  className="px-3 py-1 text-xs font-semibold hover:bg-white/5 rounded-lg text-slate-300 hover:text-white transition cursor-pointer"
+                  className="px-4 py-2.5 bg-[#151c2d] border border-slate-700/80 text-sm font-semibold hover:bg-white/5 rounded-lg text-slate-200 hover:text-white transition cursor-pointer"
                 >
                   Today
                 </button>
-                <button
-                  onClick={handleNext}
-                  className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-white transition cursor-pointer"
-                  title="Next"
-                >
+                <button onClick={handlePrev} className="p-2 text-slate-400 hover:text-white transition cursor-pointer" title="Previous month">
+                  <ChevronLeft size={18} />
+                </button>
+                <h2 className="text-lg md:text-xl font-bold text-white min-w-[170px] text-center">{formatMonthYear(currentDate)}</h2>
+                <button onClick={handleNext} className="p-2 text-slate-400 hover:text-white transition cursor-pointer" title="Next month">
                   <ChevronRight size={18} />
                 </button>
               </div>
 
-              <h2 className="text-lg md:text-xl font-bold text-white min-w-[180px]">
-                {formatMonthYear(currentDate)}
-              </h2>
-            </div>
-
-            {/* Center: View Modes & Personal/Workspace toggle */}
-            <div className="flex flex-wrap items-center gap-3">
+              {/* View modes and personal/workspace switch */}
+              <div className="flex flex-wrap items-center gap-3">
               {/* Month / Week / Day */}
               <div className="flex items-center bg-[#1c1f2e] border border-white/10 rounded-xl p-1 text-xs font-semibold">
                 <button
                   onClick={() => setViewMode("month")}
                   className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     viewMode === "month"
-                      ? "bg-violet-600 text-white shadow"
+                    ? "bg-[#263a5d] text-white shadow"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -549,7 +633,7 @@ const CalendarPage = () => {
                   onClick={() => setViewMode("week")}
                   className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     viewMode === "week"
-                      ? "bg-violet-600 text-white shadow"
+                    ? "bg-[#263a5d] text-white shadow"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -559,7 +643,7 @@ const CalendarPage = () => {
                   onClick={() => setViewMode("day")}
                   className={`px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     viewMode === "day"
-                      ? "bg-violet-600 text-white shadow"
+                    ? "bg-[#263a5d] text-white shadow"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -573,7 +657,7 @@ const CalendarPage = () => {
                   onClick={() => setScopeView("my")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     scopeView === "my"
-                      ? "bg-blue-600 text-white shadow"
+                    ? "bg-[#3b47f5] text-white shadow"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -584,7 +668,7 @@ const CalendarPage = () => {
                   onClick={() => setScopeView("workspace")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition cursor-pointer ${
                     scopeView === "workspace"
-                      ? "bg-blue-600 text-white shadow"
+                    ? "bg-[#3b47f5] text-white shadow"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
@@ -592,9 +676,11 @@ const CalendarPage = () => {
                   Workspace View
                 </button>
               </div>
+              </div>
+
             </div>
 
-            {/* Right: Quick Filters */}
+            {/* Quick filters */}
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-2 text-xs font-medium text-slate-300 cursor-pointer select-none">
                 <input
@@ -636,10 +722,10 @@ const CalendarPage = () => {
               {/* Reset */}
               <button
                 onClick={resetFilters}
-                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition cursor-pointer"
-                title="Reset Filters"
+                className="px-4 py-1.5 text-xs text-blue-400 hover:text-blue-300 border border-blue-500/60 rounded-lg transition cursor-pointer"
+                title="Reset filters"
               >
-                <RotateCcw size={16} />
+                Reset
               </button>
             </div>
           </div>
@@ -649,23 +735,27 @@ const CalendarPage = () => {
             {/* CALENDAR GRID */}
             <div className="flex-1 w-full bg-[#121520] border border-white/5 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
               {/* Day Headers */}
-              <div className="grid grid-cols-7 border-b border-white/5 bg-[#171a29] text-center text-xs font-semibold text-slate-400 uppercase tracking-wider py-3">
-                <span>Sun</span>
-                <span>Mon</span>
-                <span>Tue</span>
-                <span>Wed</span>
-                <span>Thu</span>
-                <span>Fri</span>
-                <span>Sat</span>
+              <div className={`grid ${calendarColumns} border-b border-white/5 bg-[#171a29] text-center text-xs font-semibold text-slate-400 uppercase tracking-wider py-3`}>
+                {dayHeaders.map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
               </div>
 
-              {/* SPRINT BANNERS OVERVIEW (ACTIVE IN VISIBLE RANGE) */}
-              {sprints.length > 0 && (
-                <div className="bg-[#151826] px-4 py-2 border-b border-white/5 flex flex-wrap gap-2 items-center">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                    <Clock size={12} className="text-violet-400" /> Sprints:
-                  </span>
-                  {sprints.map((sprint) => {
+              {/* The all-day sprint row is part of the calendar grid, so every
+                  rail is aligned to the same weekday columns as the task cells. */}
+              {sprintSegments.length > 0 && (
+                <div className="relative border-b border-white/5 bg-[#151826]">
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 grid grid-cols-7">
+                    {Array.from({ length: 7 }).map((_, index) => (
+                      <div key={index} className="border-r border-white/5 last:border-r-0" />
+                    ))}
+                  </div>
+                  <div
+                    className="relative z-10 grid grid-cols-7 gap-y-1 py-2"
+                    style={{ gridTemplateRows: `repeat(${Math.max(...sprintSegments.map((segment) => segment.lane))}, minmax(0, 28px))` }}
+                  >
+                  {sprintSegments.map((segment) => {
+                    const sprint = segment.sprint;
                     const start = sprint.startDate
                       ? new Date(sprint.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                       : "Unset";
@@ -675,27 +765,43 @@ const CalendarPage = () => {
                     const isCompleted = sprint.status === "COMPLETED";
 
                     return (
-                      <div
-                        key={sprint.id}
-                        className={`text-xs px-3 py-1 rounded-lg border flex items-center gap-2 font-medium ${
+                      <button
+                        key={segment.id}
+                        type="button"
+                        title={`${sprint.name}: ${start} to ${end}`}
+                        style={{ gridColumn: `${segment.column} / span ${segment.span}`, gridRow: segment.lane }}
+                        className={`mx-px flex min-w-0 items-center gap-2 px-3 text-left text-xs font-medium transition hover:brightness-110 ${
                           isCompleted
-                            ? "bg-slate-800/60 border-slate-700 text-slate-400"
-                            : "bg-violet-600/20 border-violet-500/40 text-violet-300"
-                        }`}
+                            ? "bg-slate-700/60 text-slate-300"
+                            : segment.lane % 2 === 0
+                            ? "bg-gradient-to-r from-emerald-700 to-emerald-500 text-emerald-50"
+                            : "bg-gradient-to-r from-violet-700 to-indigo-600 text-violet-50"
+                        } ${segment.startsSprint ? "rounded-l-md" : "rounded-l-none"} ${segment.endsSprint ? "rounded-r-md" : "rounded-r-none"}`}
                       >
                         <span className="w-2 h-2 rounded-full bg-violet-400" />
                         <span className="font-bold">{sprint.name}</span>
                         <span className="text-[10px] opacity-70">
                           ({start} – {end})
                         </span>
-                      </div>
+                      </button>
                     );
                   })}
+                  </div>
                 </div>
               )}
 
               {/* Calendar Days Matrix */}
-              <div className="grid grid-cols-7 auto-rows-fr divide-x divide-y divide-white/5">
+              {calendarError && (
+                <div className="mx-3 mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {calendarError}
+                </div>
+              )}
+
+              {loading && (
+                <div className="border-b border-white/5 px-3 py-2 text-xs text-slate-400">Loading calendar…</div>
+              )}
+
+              <div className={`grid ${calendarColumns} auto-rows-fr divide-x divide-y divide-white/5`}>
                 {calendarDays.map(({ date, isCurrentMonth }, idx) => {
                   const yyyy = date.getFullYear();
                   const mm = String(date.getMonth() + 1).padStart(2, "0");
@@ -705,20 +811,13 @@ const CalendarPage = () => {
                   // Find tasks due on this date
                   const dayTasks = filteredTasks.filter((t) => {
                     if (!t.dueDate) return false;
+                    // Parse in local time to avoid UTC midnight offset shifting the day
                     const d = new Date(t.dueDate);
                     return (
-                      d.getFullYear() === yyyy &&
+                      d.getFullYear() === date.getFullYear() &&
                       d.getMonth() === date.getMonth() &&
                       d.getDate() === date.getDate()
                     );
-                  });
-
-                  // Check if any sprint starts or spans this date
-                  const activeSprintsOnDay = sprints.filter((s) => {
-                    if (!s.startDate || !s.endDate) return false;
-                    const sStart = new Date(s.startDate);
-                    const sEnd = new Date(s.endDate);
-                    return date >= sStart && date <= sEnd;
                   });
 
                   return (
@@ -727,7 +826,7 @@ const CalendarPage = () => {
                       onDragOver={(e) => e.preventDefault()}
                       onDrop={(e) => handleDropOnDate(e, dateStr)}
                       onClick={() => handleDayClick(date)}
-                      className={`min-h-[120px] md:min-h-[140px] p-2 transition-all flex flex-col group relative cursor-pointer ${
+                      className={`${viewMode === "day" ? "min-h-[480px]" : "min-h-[120px] md:min-h-[140px]"} p-2 transition-all flex flex-col group relative cursor-pointer ${
                         isCurrentMonth ? "bg-[#121520] hover:bg-[#181c2b]" : "bg-[#0d0f17]/60 text-slate-600"
                       } ${isToday(date) ? "ring-1 ring-violet-500/40 bg-violet-950/10" : ""}`}
                     >
@@ -757,17 +856,6 @@ const CalendarPage = () => {
                           <Plus size={14} />
                         </button>
                       </div>
-
-                      {/* Mini Sprint Ribbon if any */}
-                      {activeSprintsOnDay.slice(0, 1).map((s) => (
-                        <div
-                          key={s.id}
-                          className="text-[10px] px-1.5 py-0.5 mb-1 rounded bg-violet-500/10 border border-violet-500/20 text-violet-300 font-semibold truncate"
-                          title={`Sprint: ${s.name}`}
-                        >
-                          {s.name}
-                        </div>
-                      ))}
 
                       {/* Tasks Pills for this day */}
                       <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto max-h-[100px] custom-scrollbar">
@@ -871,7 +959,6 @@ const CalendarPage = () => {
                     backlogTasks.map((task) => {
                       const type = getTaskType(task);
                       const style = TASK_TYPE_STYLES[type] || TASK_TYPE_STYLES.FEATURE;
-                      const Icon = style.icon;
 
                       return (
                         <div
@@ -922,8 +1009,18 @@ const CalendarPage = () => {
                 {/* Quick Add Backlog Task */}
                 <button
                   onClick={() => {
-                    setCreateModalDate("");
-                    handleOpenTaskModal();
+                    // Directly open the task modal with no pre-filled date (backlog task)
+                    setShowCreateChoiceModal(false);
+                    setNewTask({
+                      title: "",
+                      description: "",
+                      projectId: projects[0]?.id || "",
+                      priority: "MEDIUM",
+                      assigneeId: "",
+                      storyPoints: 0,
+                      dueDate: "", // intentionally empty — backlog task has no due date yet
+                    });
+                    setShowTaskCreateModal(true);
                   }}
                   className="mt-3 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition cursor-pointer"
                 >
@@ -988,10 +1085,14 @@ const CalendarPage = () => {
                   </div>
 
                   <button
-                    onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/tasks`)}
+                    onClick={() =>
+                      navigate(
+                        `/organizations/${orgId}/workspaces/${workspaceId}/tasks?taskId=${selectedTask.id}`
+                      )
+                    }
                     className="mt-2 w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
-                    Open in Kanban Board <ExternalLink size={13} />
+                    Open Task <ExternalLink size={13} />
                   </button>
                 </div>
               )}
@@ -1004,7 +1105,16 @@ const CalendarPage = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
             <div className="bg-[#161926] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-white">Create on {createModalDate}</h3>
+                <h3 className="text-base font-bold text-white">
+                  Create on{" "}
+                  {createModalDate
+                    ? new Date(createModalDate + "T12:00:00").toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : ""}
+                </h3>
                 <button
                   onClick={() => setShowCreateChoiceModal(false)}
                   className="p-1 hover:bg-white/10 rounded-lg text-slate-400 hover:text-white cursor-pointer"
