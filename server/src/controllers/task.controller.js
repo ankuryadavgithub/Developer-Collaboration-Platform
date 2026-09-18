@@ -241,7 +241,7 @@ export const updateTask = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid Task ID." });
     }
     
-    const { status, priority, assigneeId, sprintId, storyPoints } = req.body;
+    const { status, priority, assigneeId, sprintId, storyPoints, dueDate } = req.body;
 
     if (assigneeId && assigneeId !== "null" && isNaN(parseInt(assigneeId))) {
       return res.status(400).json({ success: false, message: "Invalid Assignee ID." });
@@ -308,6 +308,12 @@ export const updateTask = async (req, res) => {
           storyPoints !== undefined
             ? parseInt(storyPoints)
             : existing.storyPoints,
+        dueDate:
+          dueDate !== undefined
+            ? dueDate && dueDate !== "null"
+              ? new Date(dueDate)
+              : null
+            : existing.dueDate,
       },
     });
 

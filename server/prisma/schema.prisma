@@ -100,7 +100,8 @@ model User {
   profileCompleted Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  platformRole          PlatformRole @default(USER)
+  calendarToken    String?  @unique
+  platformRole     PlatformRole @default(USER)
   organizationMembers   OrganizationMember[]
   invitationsReceived   Invitation[] @relation("ReceivedInvitations")
   invitationsSent       Invitation[] @relation("SentInvitations")

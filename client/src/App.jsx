@@ -37,6 +37,7 @@ import ProjectDetails from "./pages/ProjectDetails";
 import Sprints from "./pages/Sprints";
 import TasksKanban from "./pages/TasksKanban";
 import UserProfile from "./pages/UserProfile";
+import CalendarPage from "./pages/Calendar";
 
 function AppRoutes() {
   const location = useLocation();
@@ -243,6 +244,15 @@ function AppRoutes() {
           }
         />
         
+        <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/calendar"
+          element={
+            <ProtectedRoute>
+              <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+
         <Route
           path="/organizations/:orgId/workspaces/:workspaceId/ci-cd"
           element={

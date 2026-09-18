@@ -16,6 +16,8 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import wikiRoutes from "./routes/wiki.routes.js";
+import calendarRoutes from "./routes/calendar.routes.js";
+import publicCalendarRoutes from "./routes/publicCalendar.routes.js";
 
 const app = express();
 
@@ -45,6 +47,10 @@ app.use("/api/organizations/:orgId/workspaces/:workspaceId/sprints", sprintRoute
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/tasks", taskRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/dashboard", dashboardRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/wiki", wikiRoutes);
+app.use("/api/organizations/:orgId/workspaces/:workspaceId/calendar", calendarRoutes);
+
+// Public iCal feed
+app.use("/api/calendar", publicCalendarRoutes);
 
 // We also mount the github routes here so they have access to the workspace context!
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/github", githubRoutes);

@@ -217,14 +217,18 @@ function Sidebar({ isOpen, setIsOpen }) {
                 </span>
               </div>
               <div
-                onClick={() => alert("Coming Soon!")}
+                onClick={() =>
+                  navigate(
+                    `/organizations/${orgId}/workspaces/${workspaceId}/calendar`,
+                  )
+                }
                 className="flex items-center h-10 px-3 gap-2 rounded-lg hover:bg-[#1c1f2e] hover:text-white cursor-pointer transition-colors"
               >
                 <Calendar size={18} className="text-slate-300 shrink-0" />
                 <span
                   className={`truncate transition-all duration-300 overflow-hidden ${isCollapsed ? "w-0 opacity-0" : "w-32 opacity-100"}`}
                 >
-                  Calender
+                  Calendar
                 </span>
               </div>
               <div
