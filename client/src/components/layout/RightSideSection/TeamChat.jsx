@@ -1,65 +1,50 @@
-import React from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const recentChats = [
-  {
-    id: 1,
-    name: "Soham A.",
-    time: "10:30 AM",
-    message: "OAuth flow is ready for review.",
-    avatar: "https://i.pravatar.cc/150?u=4",
-  },
-  {
-    id: 2,
-    name: "Ankur Y.",
-    time: "10:28 AM",
-    message: "Pushed the latest backend changes.",
-    avatar: "https://i.pravatar.cc/150?u=3",
-  },
-  {
-    id: 3,
-    name: "Sumit S.",
-    time: "10:25 AM",
-    message: "Updated the UI for the dashboard.",
-    avatar: "https://i.pravatar.cc/150?u=2",
-  },
-];
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-export default function TeamChat() {
+export default function TeamChat({ orgId, workspaceId }) {
+  const navigate = useNavigate();
+  const [channels, setChannels] = useState([]);
+  const [channel, setChannel] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    if (!orgId || !workspaceId) return undefined;
+    setLoading(true);
+    axios.get(`${API}/api/organizations/${orgId}/workspaces/${workspaceId}/chat/channels`, { withCredentials: true })
+      .then((res) => { if (active) { setChannels(res.data.data); setChannel(res.data.data.find((item) => item.name === "general") || res.data.data[0]); } })
+      .catch((err) => active && setError(err.response?.data?.message || "Unable to load chat."))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [orgId, workspaceId]);
+
+  useEffect(() => {
+    let active = true;
+    if (!channel) return undefined;
+    setLoading(true); setMessages([]);
+    axios.get(`${API}/api/organizations/${orgId}/workspaces/${workspaceId}/chat/channels/${channel.id}/messages`, { params: { page: 1, limit: 50 }, withCredentials: true })
+      .then((res) => { if (active) setMessages(res.data.data); })
+      .catch((err) => active && setError(err.response?.data?.message || "Unable to load messages."))
+      .finally(() => active && setLoading(false));
+    return () => { active = false; };
+  }, [channel, orgId, workspaceId]);
+
   return (
-    <div className="bg-[#161822] rounded-xl p-5 border border-white/5">
+    <div className="bg-[#161822] rounded-xl p-5 border border-white/5 min-h-[300px] flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-white font-semibold text-sm">
           Team Chat <span className="text-[#8b92a5] font-normal">(Recent)</span>
         </h3>
-        <a
-          href="#"
-          className="text-indigo-400 hover:text-indigo-300 text-xs hover:underline transition-colors"
-        >
-          View all
-        </a>
+        <button onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/chat`)} className="text-indigo-400 hover:text-indigo-300 text-xs">View all</button>
       </div>
-
-      <div className="flex flex-col space-y-4">
-        {recentChats.map((chat) => (
-          <div key={chat.id} className="flex space-x-3 group cursor-pointer">
-            <img
-              src={chat.avatar}
-              alt={chat.name}
-              className="w-8 h-8 rounded-full border border-white/10 mt-0.5 flex-shrink-0"
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-0.5">
-                <p className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors truncate">
-                  {chat.name}
-                </p>
-                <p className="text-xs text-[#8b92a5] whitespace-nowrap ml-2">
-                  {chat.time}
-                </p>
-              </div>
-              <p className="text-xs text-[#8b92a5] truncate">{chat.message}</p>
-            </div>
-          </div>
-        ))}
+      {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
+      <div className="flex-1 min-h-[190px] max-h-[280px] overflow-y-auto space-y-3 pr-1">
+        {loading ? <p className="text-center text-xs text-slate-500 pt-8">Loading recent messages...</p> : messages.length === 0 ? <p className="text-center text-xs text-slate-500 pt-8">No team messages yet.</p> : messages.slice(-3).reverse().map((message) => <button key={message.id} onClick={() => navigate(`/organizations/${orgId}/workspaces/${workspaceId}/chat`)} className="flex w-full gap-2 text-left"><div className="w-7 h-7 rounded-full bg-indigo-600 text-white text-center leading-7 text-xs overflow-hidden">{message.sender?.avatar ? <img src={message.sender.avatar} alt="" className="w-full h-full object-cover" /> : (message.sender?.username || "?")[0]}</div><div className="min-w-0 flex-1"><p className="text-xs text-white">{message.sender?.username || "Member"} <span className="float-right text-slate-500">{new Date(message.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</span></p><p className="text-xs text-slate-400 truncate">{message.content}</p></div></button>)}
       </div>
     </div>
   );

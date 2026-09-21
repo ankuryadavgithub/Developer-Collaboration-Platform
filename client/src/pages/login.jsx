@@ -51,6 +51,7 @@ function Login() {
       if(response.data.success){
 
         localStorage.setItem("user", JSON.stringify(response.data.data));
+        window.dispatchEvent(new Event("auth:changed"));
 
         goTo("/organization", { replace: true });;
       }
@@ -82,6 +83,7 @@ function Login() {
         profileCompleted: result.profileCompleted,
       })
     );
+    window.dispatchEvent(new Event("auth:changed"));
 
     // A completed Google user logs in directly to the dashboard.
     if (result.profileCompleted) {

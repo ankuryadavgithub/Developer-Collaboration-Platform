@@ -157,6 +157,17 @@ export const createWorkspace = async (req, res) => {
         },
       });
 
+      // Every workspace starts with a channel that automatically includes all members.
+      await tx.channel.create({
+        data: {
+          workspaceId: workspace.id,
+          name: "general",
+          description: "Workspace-wide discussion",
+          isDefaultAll: true,
+          members: { create: { userId: req.user.id } },
+        },
+      });
+
       return workspace;
     });
 

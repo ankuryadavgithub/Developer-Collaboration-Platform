@@ -38,6 +38,8 @@ import Sprints from "./pages/Sprints";
 import TasksKanban from "./pages/TasksKanban";
 import UserProfile from "./pages/UserProfile";
 import CalendarPage from "./pages/Calendar";
+import ChatPage from "./pages/Chat";
+import { SocketProvider } from "./context/SocketContext";
 
 function AppRoutes() {
   const location = useLocation();
@@ -254,6 +256,11 @@ function AppRoutes() {
         />
 
         <Route
+          path="/organizations/:orgId/workspaces/:workspaceId/chat"
+          element={<ProtectedRoute><ChatPage /></ProtectedRoute>}
+        />
+
+        <Route
           path="/organizations/:orgId/workspaces/:workspaceId/ci-cd"
           element={
             <ProtectedRoute>
@@ -276,7 +283,7 @@ function App() {
   return (
     <BrowserRouter>
       <NavigationLoadingProvider>
-        <AppRoutes />
+        <SocketProvider><AppRoutes /></SocketProvider>
       </NavigationLoadingProvider>
     </BrowserRouter>
   );

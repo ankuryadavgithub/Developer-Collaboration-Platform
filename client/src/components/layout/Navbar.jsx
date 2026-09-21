@@ -4,9 +4,11 @@ import { useNavigationLoading } from "../../context/NavigationLoadingContext.jsx
 import githubIcon from "/src/assets/github.svg";
 import { logout } from "../../services/googleAuthService.js";
 import NotificationDropdown from "./NotificationDropdown.jsx";
+import { useSocket } from "../../context/SocketContext";
 
 const Navbar = ({ toggleSidebar, githubData }) => {
   const { goTo } = useNavigationLoading();
+  const { disconnect } = useSocket();
   const dropdownRef = useRef(null);
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -30,7 +32,9 @@ const Navbar = ({ toggleSidebar, githubData }) => {
     } catch (error) {
       console.error("Logout request failed:", error);
     } finally {
+      disconnect();
       localStorage.removeItem("user");
+      window.dispatchEvent(new Event("auth:changed"));
       goTo("/login", { replace: true });
     }
   };

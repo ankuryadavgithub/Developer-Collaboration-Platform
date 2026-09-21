@@ -114,6 +114,10 @@ model User {
   activities            Activity[]
   notifications         Notification[]
   createdWikiPages      WikiPage[]
+  messages              Message[]
+  channelMemberships    ChannelMember[]
+  directParticipants    DirectParticipant[]
+  directMessages        DirectMessage[]
 }
 
 model Organization {
@@ -178,6 +182,8 @@ model Workspace {
   tasks                 Task[]
   activities            Activity[]
   wikiPages             WikiPage[]
+  channels              Channel[]
+  directConversations   DirectConversation[]
 }
 
 model Repository {
@@ -343,4 +349,88 @@ model WikiPage {
   createdBy   User      @relation(fields: [createdById], references: [id])
 
   @@unique([workspaceId, title])
+}
+
+model Channel {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  name        String
+  description String?
+  isDefaultAll Boolean  @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  members     ChannelMember[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId])
+}
+
+model ChannelMember {
+  channelId Int
+  userId    Int
+  joinedAt  DateTime @default(now())
+
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([channelId, userId])
+  @@index([userId])
+}
+
+model DirectConversation {
+  id          Int       @id @default(autoincrement())
+  workspaceId Int
+  directKey   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  participants DirectParticipant[]
+  messages     DirectMessage[]
+
+  @@unique([workspaceId, directKey])
+  @@index([workspaceId])
+}
+
+model DirectParticipant {
+  conversationId Int
+  userId         Int
+  joinedAt       DateTime @default(now())
+
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model DirectMessage {
+  id             Int       @id @default(autoincrement())
+  conversationId Int
+  senderId       Int
+  content        String
+  createdAt      DateTime  @default(now())
+
+  conversation   DirectConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User               @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+}
+
+model Message {
+  id        Int      @id @default(autoincrement())
+  channelId Int
+  senderId  Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  channel   Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  sender    User     @relation(fields: [senderId], references: [id])
+
+  @@index([channelId, createdAt])
+  @@index([senderId])
 }

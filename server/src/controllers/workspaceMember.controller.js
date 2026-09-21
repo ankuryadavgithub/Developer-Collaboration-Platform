@@ -131,6 +131,17 @@ export const addWorkspaceMember = async (req, res) => {
       }
     });
 
+    const defaultChannels = await prisma.channel.findMany({
+      where: { workspaceId, isDefaultAll: true },
+      select: { id: true },
+    });
+    if (defaultChannels.length) {
+      await prisma.channelMember.createMany({
+        data: defaultChannels.map((channel) => ({ channelId: channel.id, userId: parseInt(userId) })),
+        skipDuplicates: true,
+      });
+    }
+
     return res
       .status(201)
       .json({

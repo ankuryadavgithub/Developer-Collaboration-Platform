@@ -66,7 +66,7 @@ const WorkspaceDashboard = () => {
           </div>
 
           <aside className="w-full xl:w-[320px] flex-shrink-0 sticky top-4">
-            <RightSideBar />
+            <RightSideBar orgId={orgId} workspaceId={workspaceId} />
           </aside>
         </div>
       </main>

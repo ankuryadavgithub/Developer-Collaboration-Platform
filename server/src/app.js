@@ -18,6 +18,7 @@ import userRoutes from "./routes/user.routes.js";
 import wikiRoutes from "./routes/wiki.routes.js";
 import calendarRoutes from "./routes/calendar.routes.js";
 import publicCalendarRoutes from "./routes/publicCalendar.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use("/api/organizations/:orgId/workspaces/:workspaceId/tasks", taskRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/dashboard", dashboardRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/wiki", wikiRoutes);
 app.use("/api/organizations/:orgId/workspaces/:workspaceId/calendar", calendarRoutes);
+app.use("/api/organizations/:orgId/workspaces/:workspaceId/chat", chatRoutes);
 
 // Public iCal feed
 app.use("/api/calendar", publicCalendarRoutes);
