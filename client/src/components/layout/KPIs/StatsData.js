@@ -1,0 +1,73 @@
+import React from "react";
+import { Folder, GitPullRequestArrow, Code, CircleAlert, CloudUpload, CloudUploadIcon, CheckCircle,   CheckCircle2Icon} from "lucide-react";
+
+const StatsData = [
+  {
+    title: "Active Projects",
+    value: 6,
+    subtitle: "2 from last week",
+    icon: Folder,
+    borderColor: "border-violet-500/30",
+    bgColor: "bg-gradient-to-br from-violet-950/60 to-slate-900",
+    iconColor: "text-violet-400",
+    bgIcon: "bg-violet-500/20",
+    hoverBorderColor: "hover:border-violet-400",
+  },
+  {
+    title: "Pull Requests",
+    value: 9,
+    subtitle: "4 Awaiting Review",
+    icon: GitPullRequestArrow,
+    borderColor: "border-sky-500/30",
+    bgColor: "bg-gradient-to-br from-cyan-950/60 to-slate-900",
+    iconColor: "text-sky-400",
+    bgIcon: "bg-sky-500/20",
+    hoverBorderColor: "hover:border-sky-400",
+  },
+  {
+    title: "Commits",
+    value: 156,
+    subtitle: "18% from last week",
+    icon: Code,
+    borderColor: "border-blue-500/30",
+    bgColor: "bg-gradient-to-br from-blue-950/60 to-slate-900",
+    iconColor: "text-blue-400",
+    bgIcon: "bg-blue-500/20",
+    hoverBorderColor: "hover:border-blue-400",
+  },
+  {
+    title: "Open Issues",
+    value: 18,
+    subtitle: "2 Critical",
+    icon: CircleAlert,
+    borderColor: "border-green-500/30",
+    bgColor: "bg-gradient-to-br from-green-950/60 to-slate-900",
+    iconColor: "text-green-400",
+    bgIcon: "bg-green-500/20",
+    hoverBorderColor: "hover:border-green-400",
+  },
+  {
+    title: "Deployments",
+    value: 4,
+    subtitle: "1 from last week",
+    icon: CloudUploadIcon,
+    borderColor: "border-orange-500/30",
+    bgColor: "bg-gradient-to-br from-orange-950/60 to-slate-900",
+    iconColor: "text-orange-400",
+    bgIcon: "bg-orange-500/20",
+    hoverBorderColor: "hover:border-orange-400",
+  },
+  {
+    title: "Tasks Done",
+    value: 32,
+    subtitle: "68% Completed",
+    icon: CheckCircle2Icon,
+    borderColor: "border-purple-500/30",
+    bgColor: "bg-gradient-to-br from-purple-950/60 to-slate-900",
+    iconColor: "text-purple-400",
+    bgIcon: "bg-purple-500/20",
+    hoverBorderColor: "hover:border-purple-400",
+  },
+];
+
+export default StatsData;
